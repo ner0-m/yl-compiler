@@ -12,7 +12,7 @@ struct stmt {
 
     virtual ~stmt() = default;
 
-    virtual auto dump(usize level) const -> void = 0;
+    virtual auto dump(usize level = 0) const -> void = 0;
 };
 
 struct expr : stmt {
@@ -28,7 +28,7 @@ struct return_stmt : stmt {
 
     ~return_stmt() override = default;
 
-    auto dump(usize level) const -> void override;
+    auto dump(usize level = 0) const -> void override;
 };
 
 struct number_literal : expr {
@@ -38,7 +38,7 @@ struct number_literal : expr {
 
     ~number_literal() override = default;
 
-    auto dump(usize level) const -> void override;
+    auto dump(usize level = 0) const -> void override;
 };
 
 struct decl_ref_expr : expr {
@@ -48,7 +48,7 @@ struct decl_ref_expr : expr {
 
     ~decl_ref_expr() override = default;
 
-    auto dump(usize level) const -> void override;
+    auto dump(usize level = 0) const -> void override;
 };
 
 struct call_expr : expr {
@@ -60,7 +60,7 @@ struct call_expr : expr {
 
     ~call_expr() override = default;
 
-    auto dump(usize level) const -> void override;
+    auto dump(usize level = 0) const -> void override;
 };
 
 struct block {
@@ -95,7 +95,7 @@ struct decl {
 
     virtual ~decl() = default;
 
-    virtual auto dump(u64 indent) const -> void = 0;
+    virtual auto dump(usize indent) const -> void = 0;
 };
 
 struct param_decl : decl {
@@ -105,7 +105,7 @@ struct param_decl : decl {
 
     ~param_decl() override = default;
 
-    auto dump(u64 level) const -> void override;
+    auto dump(usize level = 0) const -> void override;
 };
 
 struct function_decl : decl {
@@ -119,5 +119,105 @@ struct function_decl : decl {
 
     ~function_decl() override = default;
 
-    auto dump(u64 level) const -> void override;
+    auto dump(usize level = 0) const -> void override;
+};
+
+struct resolved_decl {
+    source_location loc;
+    std::string identifier;
+    type type_;
+
+    resolved_decl(source_location loc, std::string id, type t) : loc(loc), identifier(id), type_(t) {}
+
+    virtual ~resolved_decl() = default;
+
+    virtual auto dump(usize level = 0) const -> void = 0;
+};
+
+struct resolved_param_decl : resolved_decl {
+    resolved_param_decl(source_location loc, std::string id, type t) : resolved_decl(loc, id, t) {}
+
+    ~resolved_param_decl() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
+struct resolved_stmt {
+    source_location loc;
+
+    resolved_stmt(source_location loc) : loc(loc) {}
+
+    virtual ~resolved_stmt() = default;
+
+    virtual auto dump(usize level = 0) const -> void = 0;
+};
+
+struct resolved_block {
+    source_location loc;
+    std::vector<std::unique_ptr<resolved_stmt>> stmts;
+
+    resolved_block(source_location loc, std::vector<std::unique_ptr<resolved_stmt>> stmts) : loc(loc), stmts(std::move(stmts)) {}
+
+    auto dump(usize level = 0) const -> void;
+};
+
+struct resolved_function_decl : resolved_decl {
+    std::vector<std::unique_ptr<resolved_param_decl>> params;
+    std::unique_ptr<resolved_block> body;
+
+    resolved_function_decl(source_location loc, std::string identifier, type t, std::vector<std::unique_ptr<resolved_param_decl>> params,
+                           std::unique_ptr<resolved_block> body)
+        : resolved_decl(loc, std::move(identifier), t), params(std::move(params)), body(std::move(body)) {}
+
+    auto dump(usize level = 0) const -> void override;
+};
+
+struct resolved_expr : resolved_stmt {
+    type t;
+
+    resolved_expr(source_location loc, type t) : resolved_stmt(loc), t(t) {}
+
+    virtual ~resolved_expr() = default;
+};
+
+struct resolved_return_stmt : public resolved_stmt {
+    std::unique_ptr<resolved_expr> expr;
+
+    resolved_return_stmt(source_location loc, std::unique_ptr<resolved_expr> expr = nullptr) : resolved_stmt(loc), expr(std::move(expr)) {}
+
+    ~resolved_return_stmt() override = default;
+
+    void dump(size_t level = 0) const override;
+};
+
+struct resolved_number_literal : resolved_expr {
+    f64 value;
+
+    resolved_number_literal(source_location loc, f64 val) : resolved_expr(loc, type::builtin_number()), value(val) {}
+
+    ~resolved_number_literal() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
+struct resolved_decl_ref_expr : resolved_expr {
+    const resolved_decl *decl;
+
+    resolved_decl_ref_expr(source_location loc, resolved_decl &decl) : resolved_expr(loc, decl.type_), decl(&decl) {}
+
+    ~resolved_decl_ref_expr() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
+struct resolved_call_expr : resolved_expr {
+    const resolved_function_decl *callee;
+    std::vector<std::unique_ptr<resolved_expr>> arguments;
+
+    resolved_call_expr(source_location loc, resolved_function_decl &callee, std::vector<std::unique_ptr<resolved_expr>> args)
+        : resolved_expr(loc, callee.type_), callee(&callee), arguments(std::move(args)) {}
+
+    ~resolved_call_expr() override = default;
+
+    auto dump(usize level = 0) const -> void override;
 };
