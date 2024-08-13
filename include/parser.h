@@ -8,6 +8,8 @@
 #include "ast.h"
 #include "lexer.h"
 
+auto tok_precedence(token_kind kind) -> i32;
+
 class parser {
     lexer *lex;
     token next_token;
@@ -58,23 +60,31 @@ class parser {
     auto parse_return_stmt() -> std::unique_ptr<return_stmt>;
 
     // <expr>
-    //   ::= <postfixExpression>
+    //   ::= <additiveExpression>
+    //
+    // <additiveExpression>
+    //   ::= <multiplicativeExpression> (('+' | '-') <multiplicativeExpression>)*
+    //
+    // <multiplicativeExpression>
+    //   ::= <primaryExpr> (('*' | '/') <primaryExpr>)*
     auto parse_expr() -> std::unique_ptr<expr>;
 
     // <postfixExpression>
-    //     ::= <primaryExpr> <argumentList>
+    //   ::= <primaryExpr> <argumentList>
     auto parse_postfix_expr() -> std::unique_ptr<expr>;
 
+    auto parse_expr_rhs(std::unique_ptr<expr> lhs, i32 precedence) -> std::unique_ptr<expr>;
+
     // <primaryExpr>
-    //  ::= <numberLiteral>
-    //  |   <declRefExpr>
-    //  |   '(' <expr> ')'
+    //   ::= <numberLiteral>
+    //   |   <declRefExpr>
+    //   |   '(' <expr> ')'
     //
     // <numberLiteral>
-    //  ::= <number>
+    //   ::= <number>
     //
     // <declRefExpr>
-    //  ::= <identifier>
+    //   ::= <identifier>
     //
     auto parse_primary() -> std::unique_ptr<expr>;
 

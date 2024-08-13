@@ -39,3 +39,5 @@ auto is_num(char c) -> bool;
 auto is_alnum(char c) -> bool;
 
 auto indent(size_t level) -> std::string;
+
+std::nullptr_t report(source_location location, std::string_view message, bool isWarning = false);

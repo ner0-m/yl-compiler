@@ -1,5 +1,49 @@
 #include "lexer.h"
 
+auto token_kind_to_string(token_kind kind) -> std::string {
+    switch (kind) {
+    case (token_kind::Identifier):
+        return "identifier";
+    case (token_kind::Unk):
+        return "Unknown";
+    case (token_kind::KwFn):
+        return "fn";
+    case (token_kind::KwVoid):
+        return "void";
+    case (token_kind::KwReturn):
+        return "return";
+    case (token_kind::KwNumber):
+        return "number";
+    case (token_kind::Number):
+        return "<number>";
+    case (token_kind::Eof):
+        return "eof";
+    case (token_kind::Lpar):
+        return "(";
+    case (token_kind::Rpar):
+        return ")";
+    case (token_kind::Lbrace):
+        return "{";
+    case (token_kind::Rbrace):
+        return "}";
+    case (token_kind::Colon):
+        return ":";
+    case (token_kind::Semi):
+        return ";";
+    case (token_kind::Comma):
+        return ",";
+    case (token_kind::Plus):
+        return "+";
+    case (token_kind::Minus):
+        return "-";
+    case (token_kind::Asterisk):
+        return "*";
+    case (token_kind::Slash):
+        return "/";
+    }
+    __builtin_unreachable();
+}
+
 auto lexer::next_token() -> token {
     auto cur = eat_next();
 
@@ -15,11 +59,16 @@ auto lexer::next_token() -> token {
         }
     }
 
-    if (cur == '/' and peek() == '/') {
-        while (peek() != '\n' and peek() != '\0') {
-            cur = eat_next();
+    if (cur == '/') {
+        if (peek() != '/') {
+            return token{loc, token_kind::Slash};
         }
-        return next_token();
+        if (peek() == '/') {
+            while (peek() != '\n' and peek() != '\0') {
+                cur = eat_next();
+            }
+            return next_token();
+        }
     }
 
     if (is_num(cur)) {

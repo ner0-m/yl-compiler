@@ -3,12 +3,17 @@
 #include <iostream>
 #include <print>
 
-std::nullptr_t report(source_location location, std::string_view message, bool isWarning = false) {
-    const auto &[file, line, col] = location;
-
-    std::print(std::cerr, "{}:{}:{}: {}: {}\n", file, line, col, (isWarning ? " warning: " : " error: "), message);
-
-    return nullptr;
+auto tok_precedence(token_kind kind) -> i32 {
+    switch (kind) {
+    case token_kind::Asterisk:
+    case token_kind::Slash:
+        return 6;
+    case token_kind::Plus:
+    case token_kind::Minus:
+        return 5;
+    default:
+        return -1;
+    }
 }
 
 auto parser::eat_next() -> void { next_token = lex->next_token(); };
@@ -85,7 +90,7 @@ auto parser::parse_function_decl() -> std::unique_ptr<function_decl> {
     eat_next();
 
     if (next_token.kind != token_kind::Identifier) {
-        return report(loc, "expected identifier");
+        return report(next_token.loc, "expected identifier");
     }
 
     std::string fn_id = *next_token.value;
@@ -97,7 +102,7 @@ auto parser::parse_function_decl() -> std::unique_ptr<function_decl> {
     }
 
     if (next_token.kind != token_kind::Colon) {
-        return report(loc, "expected ':'");
+        return report(next_token.loc, "expected ':'");
     }
     eat_next(); // :
 
@@ -107,7 +112,7 @@ auto parser::parse_function_decl() -> std::unique_ptr<function_decl> {
     }
 
     if (next_token.kind != token_kind::Lbrace) {
-        return report(loc, "expected function body starting with '{'");
+        return report(next_token.loc, "expected function body starting with '{'");
     }
 
     auto block = parse_block();
@@ -234,7 +239,7 @@ auto parser::parse_block() -> std::unique_ptr<block> {
     }
 
     if (next_token.kind != token_kind::Rbrace) {
-        return report(loc, "expected '}' at the end of a block");
+        return report(next_token.loc, "expected '}' at the end of a block");
     }
     eat_next(); // eat '}'
 
@@ -259,7 +264,41 @@ auto parser::parse_stmt() -> std::unique_ptr<stmt> {
     return expr;
 }
 
-auto parser::parse_expr() -> std::unique_ptr<expr> { return parse_postfix_expr(); }
+auto parser::parse_expr() -> std::unique_ptr<expr> {
+    auto lhs = parse_postfix_expr();
+    if (!lhs) {
+        return nullptr;
+    }
+
+    return parse_expr_rhs(std::move(lhs), 0);
+}
+
+auto parser::parse_expr_rhs(std::unique_ptr<expr> lhs, i32 precedence) -> std::unique_ptr<expr> {
+    while (true) {
+        auto op = next_token;
+        auto cur_precedence = tok_precedence(op.kind);
+
+        if (cur_precedence < precedence) {
+            return lhs;
+        }
+
+        eat_next(); // eat operator
+
+        auto rhs = parse_primary();
+        if (!rhs) {
+            return nullptr;
+        }
+
+        if (cur_precedence < tok_precedence(next_token.kind)) {
+            rhs = parse_expr_rhs(std::move(rhs), cur_precedence + 1);
+            if (!rhs) {
+                return nullptr;
+            }
+        }
+
+        lhs = std::make_unique<binary_op>(op.loc, std::move(lhs), std::move(rhs), op.kind);
+    }
+}
 
 auto parser::parse_return_stmt() -> std::unique_ptr<return_stmt> {
     auto loc = next_token.loc;
@@ -277,6 +316,7 @@ auto parser::parse_return_stmt() -> std::unique_ptr<return_stmt> {
     if (next_token.kind != token_kind::Semi) {
         return report(next_token.loc, "expected ';' at the end of a return statement");
     }
+    eat_next(); // eat ';'
 
     return std::make_unique<return_stmt>(loc, std::move(e));
 }
@@ -296,7 +336,7 @@ auto parser::parse_primary() -> std::unique_ptr<expr> {
         return identifier;
     }
 
-    return report(loc, "expected expression");
+    return report(next_token.loc, "expected expression");
 }
 
 auto parser::parse_postfix_expr() -> std::unique_ptr<expr> {
@@ -324,7 +364,7 @@ auto parser::parse_param_decl() -> std::unique_ptr<param_decl> {
     std::string id = *next_token.value;
     eat_next(); // eat identifier
 
-    if (next_token.kind != token_kind::Semi) {
+    if (next_token.kind != token_kind::Colon) {
         return report(next_token.loc, "expected ':'");
     }
     eat_next();

@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "lexer.h"
 #include "utils.h"
 
 struct stmt {
@@ -63,6 +64,20 @@ struct call_expr : expr {
     auto dump(usize level = 0) const -> void override;
 };
 
+struct binary_op : expr {
+    std::unique_ptr<expr> lhs;
+    std::unique_ptr<expr> rhs;
+
+    token_kind op;
+
+    binary_op(source_location loc, std::unique_ptr<expr> lhs, std::unique_ptr<expr> rhs, token_kind op)
+        : expr(loc), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op) {}
+
+    ~binary_op() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
 struct block {
     source_location loc;
     std::vector<std::unique_ptr<stmt>> statements;
@@ -71,6 +86,7 @@ struct block {
 
     auto dump(usize level = 0) const -> void;
 };
+
 struct type {
     enum class kind { void_, number, custom };
 
@@ -110,12 +126,12 @@ struct param_decl : decl {
 
 struct function_decl : decl {
     type type_;
-    std::unique_ptr<block> block_;
+    std::unique_ptr<block> body_;
     std::vector<std::unique_ptr<param_decl>> params_;
 
     function_decl(source_location loc, std::string identifier, std::vector<std::unique_ptr<param_decl>> params, type t,
                   std::unique_ptr<block> b)
-        : decl(loc, std::move(identifier)), params_(std::move(params)), type_(t), block_(std::move(b)) {}
+        : decl(loc, std::move(identifier)), params_(std::move(params)), type_(t), body_(std::move(b)) {}
 
     ~function_decl() override = default;
 
@@ -214,7 +230,7 @@ struct resolved_call_expr : resolved_expr {
     const resolved_function_decl *callee;
     std::vector<std::unique_ptr<resolved_expr>> arguments;
 
-    resolved_call_expr(source_location loc, resolved_function_decl &callee, std::vector<std::unique_ptr<resolved_expr>> args)
+    resolved_call_expr(source_location loc, const resolved_function_decl &callee, std::vector<std::unique_ptr<resolved_expr>> args)
         : resolved_expr(loc, callee.type_), callee(&callee), arguments(std::move(args)) {}
 
     ~resolved_call_expr() override = default;

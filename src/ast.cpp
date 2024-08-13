@@ -23,6 +23,13 @@ auto call_expr::dump(usize level) const -> void {
     }
 }
 
+auto binary_op::dump(usize level) const -> void {
+    std::print(std::cerr, "{}BinaryOperator: {}\n", indent(level), token_kind_to_string(op));
+
+    lhs->dump(level + 1);
+    rhs->dump(level + 1);
+}
+
 auto block::dump(usize level) const -> void {
     std::cerr << std::format("{}Block\n", indent(level));
 
@@ -40,7 +47,7 @@ auto function_decl::dump(usize level) const -> void {
         param->dump(level + 1);
     }
 
-    block_->dump(level + 1);
+    body_->dump(level + 1);
 }
 
 void resolved_param_decl::dump(usize level) const {
