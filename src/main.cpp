@@ -3,7 +3,10 @@
 #include <iostream>
 #include <print>
 
+#include "llvm/IR/Module.h"
+
 #include "ast.h"
+#include "codegen.h"
 #include "lexer.h"
 #include "parser.h"
 #include "sema.h"
@@ -19,12 +22,12 @@ void displayHelp() {
                "  -res-dump    print the resolved syntax tree\n"
                "  -llvm-dump   print the llvm module\n");
 }
+
 [[noreturn]] void error(std::string_view msg) {
     std::print(std::cerr, "error: {}\n", msg);
     displayHelp();
     std::exit(1);
 }
-
 
 struct CompilerOptions {
     std::filesystem::path source;
@@ -123,4 +126,31 @@ int main(int argc, const char **argv) {
     if (resolvedTree.empty()) {
         return 1;
     }
+
+    codegen codegen(std::move(resolvedTree), options.source.c_str());
+    llvm::Module *llvmIR = codegen.generate_ir();
+
+    if (options.llvmDump) {
+        codegen.dump();
+        return 0;
+    }
+
+    std::stringstream path;
+    path << "tmp-" << std::filesystem::hash_value(options.source) << ".ll";
+    const std::string &llvmIRPath = path.str();
+
+    std::error_code errorCode;
+    llvm::raw_fd_ostream f(llvmIRPath, errorCode);
+    llvmIR->print(f, nullptr);
+
+    std::stringstream command;
+    command << "clang " << llvmIRPath;
+    if (!options.output.empty())
+        command << " -o " << options.output;
+
+    int ret = std::system(command.str().c_str());
+
+    std::filesystem::remove(llvmIRPath);
+
+    return ret;
 }

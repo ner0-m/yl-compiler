@@ -35,7 +35,7 @@ class codegen {
 
     auto gen_block(const resolved_block &block) -> void;
 
-    auto gen_stmt(const resolved_stmt &stmt) -> llvm::Value*;
+    auto gen_stmt(const resolved_stmt &stmt) -> llvm::Value *;
 
     auto gen_expr(const resolved_expr &stmt) -> llvm::Value *;
 
@@ -43,7 +43,7 @@ class codegen {
 
     auto gen_call_expr(const resolved_call_expr &call) -> llvm::Value *;
 
-    auto gen_builtin_print_body(const resolved_function_decl& println) -> void;
+    auto gen_builtin_print_body(const resolved_function_decl &println) -> void;
 
     auto gen_main_wrapper() -> void;
 
@@ -55,4 +55,8 @@ class codegen {
     }
 
     auto generate_ir() -> llvm::Module *;
+
+    auto dump() -> void {
+        module.print(llvm::errs(), nullptr);
+    }
 };
