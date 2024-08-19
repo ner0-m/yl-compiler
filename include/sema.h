@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "ast.h"
+#include "constexpr.h"
 
 class sema {
     std::vector<std::unique_ptr<function_decl>> ast;
@@ -10,6 +11,8 @@ class sema {
     std::vector<std::vector<resolved_decl *>> scopes;
 
     resolved_function_decl *cur_fn;
+
+    constant_expression_evaluator cee;
 
     class scope_raii {
         sema *sema;

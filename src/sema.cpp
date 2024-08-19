@@ -89,9 +89,10 @@ auto sema::resolve_function_decl(const function_decl &fn) -> std::unique_ptr<res
 }
 
 auto sema::resolve_param_decl(const param_decl &param) -> std::unique_ptr<resolved_param_decl> {
+
     auto type = resolve_type(param.type_);
 
-    if (!type || type->k == type::kind::void_) {
+    if (!type.has_value() || type->k == type::kind::void_) {
         return report(param.loc, std::format("parameter '{}' has invalid '{}' type", param.identifier, param.type_.name));
     }
 
@@ -161,6 +162,8 @@ auto sema::resolve_return_stmt(const return_stmt &ret_stmt) -> std::unique_ptr<r
         if (cur_fn->type_.k != resolved_expr->t.k) {
             return report(resolved_expr->loc, "unexpected return type");
         }
+
+        resolved_expr->set_value(cee.evaluate(*resolved_expr, false));
     }
 
     return std::make_unique<resolved_return_stmt>(ret_stmt.loc, std::move(resolved_expr));
@@ -186,6 +189,10 @@ auto sema::resolve_expr(const expr &expr) -> std::unique_ptr<resolved_expr> {
 
     if (const auto *decl_ref_expr = dynamic_cast<const struct decl_ref_expr *>(&expr)) {
         return resolve_decl_ref_expr(*decl_ref_expr);
+    }
+
+    if (const auto *call = dynamic_cast<const call_expr *>(&expr)) {
+        return resolve_call_expr(*call);
     }
 
     if (const auto *bop = dynamic_cast<const binary_op *>(&expr)) {
@@ -239,8 +246,11 @@ auto sema::resolve_call_expr(const call_expr &call) -> std::unique_ptr<resolved_
     for (auto &&arg : call.arguments) {
         auto resolved_arg = resolve_expr(*arg);
 
-        if (resolved_arg->t.k != resolved_function_decl->params[idx]->type_.k)
+        if (resolved_arg->t.k != resolved_function_decl->params[idx]->type_.k) {
             return report(resolved_arg->loc, "unexpected type of argument");
+        }
+
+        resolved_arg->set_value(cee.evaluate(*resolved_arg, false));
 
         ++idx;
         resolved_args.emplace_back(std::move(resolved_arg));
@@ -274,11 +284,11 @@ auto sema::resolve_binary_op(const binary_op &op) -> std::unique_ptr<resolved_bi
     }
 
     if (resolved_lhs->t.k == type::kind::void_) {
-        return report(resolved_lhs->loc, "void expression cannot be used as a lhs operand to binary operator");
+        return report(resolved_lhs->loc, "void expression cannot be used as LHS operand to binary operator");
     }
 
     if (resolved_rhs->t.k == type::kind::void_) {
-        return report(resolved_rhs->loc, "void expression cannot be used as a rhs operand to binary operator");
+        return report(resolved_rhs->loc, "void expression cannot be used as RHS operand to binary operator");
     }
 
     return std::make_unique<resolved_binary_op>(op.loc, op.op, std::move(resolved_lhs), std::move(resolved_rhs));

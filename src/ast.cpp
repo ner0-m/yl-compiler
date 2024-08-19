@@ -74,14 +74,27 @@ auto resolved_function_decl::dump(usize level) const -> void {
     body->dump(level + 1);
 }
 
-void resolved_number_literal::dump(usize level) const { std::print(std::cerr, "{}ResolvedNumberLiteral: '{}'\n", indent(level), value); }
+void resolved_number_literal::dump(usize level) const {
+    std::print(std::cerr, "{}ResolvedNumberLiteral: '{}'\n", indent(level), value);
+    if (auto val = get_value()) {
+        std::cerr << std::format("{}| value: {}\n", indent(level), *val);
+    }
+}
 
 void resolved_decl_ref_expr::dump(usize level) const {
     std::print(std::cerr, "{}ResolvedDeclRefExpr: @({}) {}\n", indent(level), static_cast<const void *>(decl), decl->identifier);
+    if (auto val = get_value()) {
+        std::cerr << std::format("{}| value: {}\n", indent(level), *val);
+    }
 }
 
 void resolved_call_expr::dump(usize level) const {
     std::print(std::cerr, "{}ResolvedCallExpr: @({}) {}\n", indent(level), static_cast<const void *>(callee), callee->identifier);
+
+    if (auto val = get_value()) {
+        std::cerr << std::format("{}| value: {}\n", indent(level), *val);
+    }
+
     for (auto &&arg : arguments) {
         arg->dump(level + 1);
     }
@@ -105,12 +118,18 @@ auto resolved_return_stmt::dump(usize level) const -> void {
 
 auto resolved_unary_op::dump(usize level) const -> void {
     std::print(std::cerr, "{}ResolvedUnaryOperator: {}\n", indent(level), token_kind_to_string(op));
+    if (auto val = get_value()) {
+        std::cerr << std::format("{}| value: {}\n", indent(level), *val);
+    }
 
     operand->dump(level + 1);
 }
 
 auto resolved_binary_op::dump(usize level) const -> void {
     std::print(std::cerr, "{}ResolvedBinaryOperator: {}\n", indent(level), token_kind_to_string(op));
+    if (auto val = get_value()) {
+        std::cerr << std::format("{}| value: {}\n", indent(level), *val);
+    }
 
     lhs->dump(level + 1);
     rhs->dump(level + 1);
@@ -118,6 +137,10 @@ auto resolved_binary_op::dump(usize level) const -> void {
 
 auto resolved_grouping_expr::dump(usize level) const -> void {
     std::print(std::cerr, "{}ResolvedGroupingExpr:\n", indent(level));
+
+    if (auto val = get_value()) {
+        std::cerr << std::format("{}| value: {}\n", indent(level), *val);
+    }
 
     expr_->dump(level + 1);
 }

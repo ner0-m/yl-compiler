@@ -1,6 +1,5 @@
 #include "parser.h"
 
-#include <iostream>
 #include <print>
 
 auto tok_precedence(token_kind kind) -> i32 {
@@ -367,11 +366,7 @@ auto parser::parse_primary() -> std::unique_ptr<expr> {
 auto parser::parse_prefix_expr() -> std::unique_ptr<expr> {
     auto tok = next_token;
 
-    if (tok.kind != token_kind::Minus) {
-        return parse_postfix_expr();
-    }
-
-    if (tok.kind != token_kind::Excl) {
+    if (tok.kind != token_kind::Minus && tok.kind != token_kind::Excl) {
         return parse_postfix_expr();
     }
 

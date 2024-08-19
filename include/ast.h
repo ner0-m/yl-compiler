@@ -6,6 +6,15 @@
 #include "lexer.h"
 #include "utils.h"
 
+template <class T> struct constant_value_container {
+    std::optional<T> value = {};
+
+  public:
+    auto set_value(std::optional<T> v) -> void { value = v; }
+
+    auto get_value() const -> std::optional<T> { return value; }
+};
+
 struct stmt {
     source_location loc;
 
@@ -210,7 +219,7 @@ struct resolved_function_decl : resolved_decl {
     auto dump(usize level = 0) const -> void override;
 };
 
-struct resolved_expr : resolved_stmt {
+struct resolved_expr : resolved_stmt, constant_value_container<double> {
     type t;
 
     resolved_expr(source_location loc, type t) : resolved_stmt(loc), t(t) {}

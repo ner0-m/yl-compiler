@@ -70,11 +70,14 @@ class parser {
     auto parse_expr() -> std::unique_ptr<expr>;
 
     // <prefixExpression>
-    //   ::= '-'* <postfixExpression>
+    //   ::= ('!' | '-')* <postfixExpression>
     auto parse_prefix_expr() -> std::unique_ptr<expr>;
 
     // <postfixExpression>
-    //   ::= <primaryExpr> <argumentList>
+    //   ::= <primaryExpression> <argumentList>
+
+    // <argumentList>
+    //   ::= '(' (<expr> (',' <expr>)* ','?)? ')'
     auto parse_postfix_expr() -> std::unique_ptr<expr>;
 
     auto parse_expr_rhs(std::unique_ptr<expr> lhs, i32 precedence) -> std::unique_ptr<expr>;

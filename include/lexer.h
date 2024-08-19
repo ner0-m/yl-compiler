@@ -49,6 +49,7 @@ const std::unordered_map<std::string_view, token_kind> keywords = {
     {"fn", token_kind::KwFn},
     {"void", token_kind::KwVoid},
     {"return", token_kind::KwReturn},
+    {"number", token_kind::KwNumber},
 };
 
 struct token {

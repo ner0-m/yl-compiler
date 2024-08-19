@@ -136,6 +136,10 @@ auto codegen::gen_stmt(const resolved_stmt &stmt) -> llvm::Value * {
 }
 
 auto codegen::gen_expr(const resolved_expr &expr) -> llvm::Value * {
+    if (auto val = expr.get_value()) {
+        return llvm::ConstantFP::get(builder.getDoubleTy(), *val);
+    }
+
     if (auto *number = dynamic_cast<const resolved_number_literal *>(&expr)) {
         return llvm::ConstantFP::get(builder.getDoubleTy(), number->value);
     }
