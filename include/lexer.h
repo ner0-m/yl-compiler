@@ -8,20 +8,24 @@
 
 #include "utils.h"
 
-constexpr auto singleCharTokens = std::array{'\0', '(', ')', '{', '}', ':', ';', ',', '+', '-', '*'};
+constexpr char singleCharTokens[] = {'\0', '(', ')', '{', '}', ':', ';', ',', '+', '-', '*', '<', '>', '!'};
 
 enum class token_kind : char {
     Unk = -128,
 
+    Slash,
+    // Equal,
+    EqualEqual,
+    AmpAmp,
+    PipePipe,
+
     Identifier,
+    Number,
 
     KwFn,
     KwVoid,
     KwReturn,
     KwNumber,
-
-    Number,
-    Slash,
 
     Eof = singleCharTokens[0],
     Lpar = singleCharTokens[1],
@@ -34,6 +38,9 @@ enum class token_kind : char {
     Plus = singleCharTokens[8],
     Minus = singleCharTokens[9],
     Asterisk = singleCharTokens[10],
+    Lt = singleCharTokens[11],
+    Gt = singleCharTokens[12],
+    Excl = singleCharTokens[13],
 };
 
 auto token_kind_to_string(token_kind kind) -> std::string;

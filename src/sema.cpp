@@ -188,6 +188,18 @@ auto sema::resolve_expr(const expr &expr) -> std::unique_ptr<resolved_expr> {
         return resolve_decl_ref_expr(*decl_ref_expr);
     }
 
+    if (const auto *bop = dynamic_cast<const binary_op *>(&expr)) {
+        return resolve_binary_op(*bop);
+    }
+
+    if (const auto *uop = dynamic_cast<const unary_op *>(&expr)) {
+        return resolve_unary_op(*uop);
+    }
+
+    if (const auto *group = dynamic_cast<const grouping_expr *>(&expr)) {
+        return resolve_group_expr(*group);
+    }
+
     __builtin_unreachable();
 }
 
@@ -235,6 +247,49 @@ auto sema::resolve_call_expr(const call_expr &call) -> std::unique_ptr<resolved_
     }
 
     return std::make_unique<resolved_call_expr>(call.loc, *resolved_function_decl, std::move(resolved_args));
+}
+
+auto sema::resolve_unary_op(const unary_op &op) -> std::unique_ptr<resolved_unary_op> {
+    auto resolved_rhs = resolve_expr(*op.operand);
+    if (!resolved_rhs) {
+        return nullptr;
+    }
+
+    if (resolved_rhs->t.k == type::kind::void_) {
+        return report(resolved_rhs->loc, "void expression cannot be used as an operand to unary operator");
+    }
+
+    return std::make_unique<resolved_unary_op>(op.loc, op.op, std::move(resolved_rhs));
+}
+
+auto sema::resolve_binary_op(const binary_op &op) -> std::unique_ptr<resolved_binary_op> {
+    auto resolved_lhs = resolve_expr(*op.lhs);
+    if (!resolved_lhs) {
+        return nullptr;
+    }
+
+    auto resolved_rhs = resolve_expr(*op.rhs);
+    if (!resolved_rhs) {
+        return nullptr;
+    }
+
+    if (resolved_lhs->t.k == type::kind::void_) {
+        return report(resolved_lhs->loc, "void expression cannot be used as a lhs operand to binary operator");
+    }
+
+    if (resolved_rhs->t.k == type::kind::void_) {
+        return report(resolved_rhs->loc, "void expression cannot be used as a rhs operand to binary operator");
+    }
+
+    return std::make_unique<resolved_binary_op>(op.loc, op.op, std::move(resolved_lhs), std::move(resolved_rhs));
+}
+
+auto sema::resolve_group_expr(const grouping_expr &group) -> std::unique_ptr<resolved_grouping_expr> {
+    auto resolved_expr = resolve_expr(*group.expr_);
+    if (!resolved_expr) {
+        return nullptr;
+    }
+    return std::make_unique<resolved_grouping_expr>(group.loc, std::move(resolved_expr));
 }
 
 auto sema::lookupDecl(const std::string &id) const -> std::pair<resolved_decl *, int> {

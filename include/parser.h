@@ -69,6 +69,10 @@ class parser {
     //   ::= <primaryExpr> (('*' | '/') <primaryExpr>)*
     auto parse_expr() -> std::unique_ptr<expr>;
 
+    // <prefixExpression>
+    //   ::= '-'* <postfixExpression>
+    auto parse_prefix_expr() -> std::unique_ptr<expr>;
+
     // <postfixExpression>
     //   ::= <primaryExpr> <argumentList>
     auto parse_postfix_expr() -> std::unique_ptr<expr>;

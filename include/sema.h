@@ -40,6 +40,12 @@ class sema {
 
     auto resolve_expr(const expr &expr) -> std::unique_ptr<resolved_expr>;
 
+    auto resolve_unary_op(const unary_op &expr) -> std::unique_ptr<resolved_unary_op>;
+
+    auto resolve_binary_op(const binary_op &expr) -> std::unique_ptr<resolved_binary_op>;
+
+    auto resolve_group_expr(const grouping_expr &expr) -> std::unique_ptr<resolved_grouping_expr>;
+
     auto resolve_decl_ref_expr(const decl_ref_expr &decl_ref, bool is_callee = false) -> std::unique_ptr<resolved_decl_ref_expr>;
 
     auto resolve_call_expr(const call_expr &call) -> std::unique_ptr<resolved_call_expr>;

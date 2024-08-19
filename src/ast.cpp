@@ -12,7 +12,7 @@ auto return_stmt::dump(usize level) const -> void {
 
 auto number_literal::dump(usize level) const -> void { std::cerr << std::format("{}NumberLiteral: '{}'\n", indent(level), value); }
 
-auto decl_ref_expr::dump(usize level) const -> void { std::cerr << std::format("{}DeclRefExpr: '{}'\n", indent(level), identifier); }
+auto decl_ref_expr::dump(usize level) const -> void { std::cerr << std::format("{}DeclRefExpr: {}\n", indent(level), identifier); }
 
 auto call_expr::dump(usize level) const -> void {
     std::print(std::cerr, "{}CallExpr:\n", indent(level));
@@ -23,11 +23,23 @@ auto call_expr::dump(usize level) const -> void {
     }
 }
 
+auto unary_op::dump(usize level) const -> void {
+    std::print(std::cerr, "{}UnaryOperator: '{}'\n", indent(level), token_kind_to_string(op));
+
+    operand->dump(level + 1);
+}
+
 auto binary_op::dump(usize level) const -> void {
-    std::print(std::cerr, "{}BinaryOperator: {}\n", indent(level), token_kind_to_string(op));
+    std::print(std::cerr, "{}BinaryOperator: '{}'\n", indent(level), token_kind_to_string(op));
 
     lhs->dump(level + 1);
     rhs->dump(level + 1);
+}
+
+auto grouping_expr::dump(usize level) const -> void {
+    std::print(std::cerr, "{}GroupingExpr:\n", indent(level));
+
+    expr_->dump(level + 1);
 }
 
 auto block::dump(usize level) const -> void {
@@ -89,4 +101,23 @@ auto resolved_return_stmt::dump(usize level) const -> void {
     if (expr) {
         expr->dump(level + 1);
     }
+}
+
+auto resolved_unary_op::dump(usize level) const -> void {
+    std::print(std::cerr, "{}ResolvedUnaryOperator: {}\n", indent(level), token_kind_to_string(op));
+
+    operand->dump(level + 1);
+}
+
+auto resolved_binary_op::dump(usize level) const -> void {
+    std::print(std::cerr, "{}ResolvedBinaryOperator: {}\n", indent(level), token_kind_to_string(op));
+
+    lhs->dump(level + 1);
+    rhs->dump(level + 1);
+}
+
+auto resolved_grouping_expr::dump(usize level) const -> void {
+    std::print(std::cerr, "{}ResolvedGroupingExpr:\n", indent(level));
+
+    expr_->dump(level + 1);
 }

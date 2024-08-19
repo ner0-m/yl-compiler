@@ -11,6 +11,15 @@ auto tok_precedence(token_kind kind) -> i32 {
     case token_kind::Plus:
     case token_kind::Minus:
         return 5;
+    case token_kind::Lt:
+    case token_kind::Gt:
+        return 4;
+    case token_kind::EqualEqual:
+        return 3;
+    case token_kind::AmpAmp:
+        return 2;
+    case token_kind::PipePipe:
+        return 1;
     default:
         return -1;
     }
@@ -265,7 +274,7 @@ auto parser::parse_stmt() -> std::unique_ptr<stmt> {
 }
 
 auto parser::parse_expr() -> std::unique_ptr<expr> {
-    auto lhs = parse_postfix_expr();
+    auto lhs = parse_prefix_expr();
     if (!lhs) {
         return nullptr;
     }
@@ -284,7 +293,7 @@ auto parser::parse_expr_rhs(std::unique_ptr<expr> lhs, i32 precedence) -> std::u
 
         eat_next(); // eat operator
 
-        auto rhs = parse_primary();
+        auto rhs = parse_prefix_expr();
         if (!rhs) {
             return nullptr;
         }
@@ -336,7 +345,44 @@ auto parser::parse_primary() -> std::unique_ptr<expr> {
         return identifier;
     }
 
+    if (next_token.kind == token_kind::Lpar) {
+        eat_next(); // eat '('
+
+        auto expr = parse_expr();
+        if (!expr) {
+            return nullptr;
+        }
+
+        if (next_token.kind != token_kind::Rpar) {
+            return report(next_token.loc, "expected ')'");
+        }
+        eat_next(); // eat ')'
+
+        return std::make_unique<grouping_expr>(loc, std::move(expr));
+    }
+
     return report(next_token.loc, "expected expression");
+}
+
+auto parser::parse_prefix_expr() -> std::unique_ptr<expr> {
+    auto tok = next_token;
+
+    if (tok.kind != token_kind::Minus) {
+        return parse_postfix_expr();
+    }
+
+    if (tok.kind != token_kind::Excl) {
+        return parse_postfix_expr();
+    }
+
+    eat_next(); // eat '-' or '!'
+
+    auto rhs = parse_prefix_expr();
+    if (!rhs) {
+        return nullptr;
+    }
+
+    return std::make_unique<unary_op>(tok.loc, std::move(rhs), tok.kind);
 }
 
 auto parser::parse_postfix_expr() -> std::unique_ptr<expr> {

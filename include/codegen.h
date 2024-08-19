@@ -39,6 +39,12 @@ class codegen {
 
     auto gen_expr(const resolved_expr &stmt) -> llvm::Value *;
 
+    auto gen_unary_op(const resolved_unary_op &op) -> llvm::Value *;
+
+    auto gen_binary_op(const resolved_binary_op &op) -> llvm::Value *;
+
+    auto gen_conditional_op(const resolved_expr &op, llvm::BasicBlock *true_block, llvm::BasicBlock *false_block) -> void;
+
     auto gen_return_stmt(const resolved_return_stmt &stmt) -> llvm::Value *;
 
     auto gen_call_expr(const resolved_call_expr &call) -> llvm::Value *;
@@ -46,6 +52,12 @@ class codegen {
     auto gen_builtin_print_body(const resolved_function_decl &println) -> void;
 
     auto gen_main_wrapper() -> void;
+
+    auto d2b(llvm::Value *val) -> llvm::Value *;
+
+    auto b2d(llvm::Value *val) -> llvm::Value *;
+
+    auto cur_fn() -> llvm::Function *;
 
   public:
     codegen(std::vector<std::unique_ptr<resolved_function_decl>> tree, std::string_view source_path)
@@ -56,7 +68,5 @@ class codegen {
 
     auto generate_ir() -> llvm::Module *;
 
-    auto dump() -> void {
-        module.print(llvm::errs(), nullptr);
-    }
+    auto dump() -> void { module.print(llvm::errs(), nullptr); }
 };

@@ -3,6 +3,8 @@
 #include <llvm/IR/Function.h>
 #include <llvm/Support/ErrorHandling.h>
 
+auto codegen::cur_fn() -> llvm::Function * { return builder.GetInsertBlock()->getParent(); };
+
 auto codegen::generate_ir() -> llvm::Module * {
     for (auto &&fn : resolved_tree) {
         gen_fn_decl(*fn);
@@ -143,7 +145,128 @@ auto codegen::gen_expr(const resolved_expr &expr) -> llvm::Value * {
     if (auto *call = dynamic_cast<const resolved_call_expr *>(&expr)) {
         return gen_call_expr(*call);
     }
+    if (auto *op = dynamic_cast<const resolved_unary_op *>(&expr)) {
+        return gen_unary_op(*op);
+    }
+    if (auto *binop = dynamic_cast<const resolved_binary_op *>(&expr)) {
+        return gen_binary_op(*binop);
+    }
+    if (auto *group = dynamic_cast<const resolved_grouping_expr *>(&expr)) {
+        return gen_expr(*group->expr_);
+    }
     llvm_unreachable("unexpected expression");
+}
+
+auto codegen::d2b(llvm::Value *val) -> llvm::Value * {
+    return builder.CreateFCmpONE(val, llvm::ConstantFP::get(builder.getDoubleTy(), 0.0), "to.bool");
+}
+
+auto codegen::b2d(llvm::Value *val) -> llvm::Value * { return builder.CreateUIToFP(val, builder.getDoubleTy(), "to.double"); }
+
+auto codegen::gen_unary_op(const resolved_unary_op &op) -> llvm::Value * {
+    llvm::Value *res = gen_expr(*op.operand);
+
+    if (op.op == token_kind::Minus) {
+        return builder.CreateFNeg(res);
+    }
+    if (op.op == token_kind::Excl) {
+        return b2d(builder.CreateNot(d2b(res)));
+    }
+
+    llvm_unreachable("unknown unary op");
+    return nullptr;
+}
+
+auto codegen::gen_binary_op(const resolved_binary_op &op) -> llvm::Value * {
+    auto kind = op.op;
+
+    if (kind == token_kind::AmpAmp || kind == token_kind::PipePipe) {
+        llvm::Function *function = cur_fn();
+        bool isOr = kind == token_kind::PipePipe;
+
+        auto *rhs_tag = isOr ? "or.rhs" : "and.rhs";
+        auto *merge_tag = isOr ? "or.merge" : "and.merge";
+
+        auto *rhs_block = llvm::BasicBlock::Create(context, rhs_tag, function);
+        auto *merge_block = llvm::BasicBlock::Create(context, merge_tag, function);
+
+        auto *true_block = isOr ? merge_block : rhs_block;
+        auto *false_block = isOr ? rhs_block : merge_block;
+        gen_conditional_op(*op.lhs, true_block, false_block);
+
+        builder.SetInsertPoint(rhs_block);
+        auto *rhs = d2b(gen_expr(*op.rhs));
+        builder.CreateBr(merge_block);
+
+        rhs_block = builder.GetInsertBlock();
+        builder.SetInsertPoint(merge_block);
+        llvm::PHINode *phi = builder.CreatePHI(builder.getInt1Ty(), 2);
+
+        for (auto it = pred_begin(merge_block); it != pred_end(merge_block); ++it) {
+            if (*it == rhs_block)
+                phi->addIncoming(rhs, rhs_block);
+            else
+                phi->addIncoming(builder.getInt1(isOr), *it);
+        }
+
+        return b2d(phi);
+    }
+
+    llvm::Value *lhs = gen_expr(*op.rhs);
+    llvm::Value *rhs = gen_expr(*op.lhs);
+
+    if (kind == token_kind::Plus) {
+        return builder.CreateFAdd(lhs, rhs);
+    }
+    if (kind == token_kind::Minus) {
+        return builder.CreateFSub(lhs, rhs);
+    }
+    if (kind == token_kind::Asterisk) {
+        return builder.CreateFMul(lhs, rhs);
+    }
+    if (kind == token_kind::Slash) {
+        return builder.CreateFDiv(lhs, rhs);
+    }
+    if (kind == token_kind::Lt) {
+        return b2d(builder.CreateFCmpOLT(lhs, rhs));
+    }
+    if (kind == token_kind::Gt) {
+        return b2d(builder.CreateFCmpOGT(lhs, rhs));
+    }
+    if (kind == token_kind::EqualEqual) {
+        return b2d(builder.CreateFCmpOEQ(lhs, rhs));
+    }
+
+    llvm_unreachable("unknown binary op");
+    return nullptr;
+}
+
+auto codegen::gen_conditional_op(const resolved_expr &op, llvm::BasicBlock *true_block, llvm::BasicBlock *false_block) -> void {
+    auto *function = cur_fn();
+
+    const auto *binop = dynamic_cast<const resolved_binary_op *>(&op);
+
+    if (binop && binop->op == token_kind::PipePipe) {
+        llvm::BasicBlock *next_block = llvm::BasicBlock::Create(context, "or.lhs.false", function);
+        gen_conditional_op(*binop->lhs, true_block, next_block);
+
+        builder.SetInsertPoint(next_block);
+        gen_conditional_op(*binop->rhs, true_block, false_block);
+
+        return;
+    }
+    if (binop && binop->op == token_kind::AmpAmp) {
+        llvm::BasicBlock *next_block = llvm::BasicBlock::Create(context, "or.lhs.true", function);
+        gen_conditional_op(*binop->lhs, next_block, false_block);
+
+        builder.SetInsertPoint(next_block);
+        gen_conditional_op(*binop->rhs, true_block, false_block);
+
+        return;
+    }
+
+    llvm::Value *val = d2b(gen_expr(op));
+    builder.CreateCondBr(val, true_block, false_block);
 }
 
 auto codegen::gen_call_expr(const resolved_call_expr &call) -> llvm::Value * {

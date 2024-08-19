@@ -16,6 +16,12 @@ auto token_kind_to_string(token_kind kind) -> std::string {
         return "number";
     case (token_kind::Number):
         return "<number>";
+    case (token_kind::EqualEqual):
+        return "==";
+    case (token_kind::AmpAmp):
+        return "&&";
+    case (token_kind::PipePipe):
+        return "||";
     case (token_kind::Eof):
         return "eof";
     case (token_kind::Lpar):
@@ -40,6 +46,12 @@ auto token_kind_to_string(token_kind kind) -> std::string {
         return "*";
     case (token_kind::Slash):
         return "/";
+    case (token_kind::Lt):
+        return "<";
+    case (token_kind::Gt):
+        return ">";
+    case (token_kind::Excl):
+        return "!";
     }
     __builtin_unreachable();
 }
@@ -57,6 +69,21 @@ auto lexer::next_token() -> token {
         if (c == cur) {
             return token{loc, static_cast<token_kind>(c)};
         }
+    }
+
+    if (cur == '=' && peek() == '=') {
+        eat_next();
+        return token{loc, token_kind::EqualEqual};
+    }
+
+    if (cur == '&' && peek() == '&') {
+        eat_next();
+        return token{loc, token_kind::AmpAmp};
+    }
+
+    if (cur == '|' && peek() == '|') {
+        eat_next();
+        return token{loc, token_kind::PipePipe};
     }
 
     if (cur == '/') {

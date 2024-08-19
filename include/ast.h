@@ -64,6 +64,18 @@ struct call_expr : expr {
     auto dump(usize level = 0) const -> void override;
 };
 
+struct unary_op : expr {
+    std::unique_ptr<expr> operand;
+
+    token_kind op;
+
+    unary_op(source_location loc, std::unique_ptr<expr> operand, token_kind op) : expr(loc), operand(std::move(operand)), op(op) {}
+
+    ~unary_op() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
 struct binary_op : expr {
     std::unique_ptr<expr> lhs;
     std::unique_ptr<expr> rhs;
@@ -74,6 +86,16 @@ struct binary_op : expr {
         : expr(loc), lhs(std::move(lhs)), rhs(std::move(rhs)), op(op) {}
 
     ~binary_op() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
+struct grouping_expr : expr {
+    std::unique_ptr<expr> expr_;
+
+    grouping_expr(source_location loc, std::unique_ptr<expr> e) : expr(loc), expr_(std::move(e)) {}
+
+    ~grouping_expr() override = default;
 
     auto dump(usize level = 0) const -> void override;
 };
@@ -234,6 +256,41 @@ struct resolved_call_expr : resolved_expr {
         : resolved_expr(loc, callee.type_), callee(&callee), arguments(std::move(args)) {}
 
     ~resolved_call_expr() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
+struct resolved_unary_op : resolved_expr {
+    token_kind op;
+    std::unique_ptr<resolved_expr> operand;
+
+    resolved_unary_op(source_location loc, token_kind op, std::unique_ptr<resolved_expr> operand)
+        : resolved_expr(loc, operand->t), op(op), operand(std::move(operand)) {}
+
+    ~resolved_unary_op() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
+struct resolved_binary_op : resolved_expr {
+    token_kind op;
+    std::unique_ptr<resolved_expr> lhs;
+    std::unique_ptr<resolved_expr> rhs;
+
+    resolved_binary_op(source_location loc, token_kind op, std::unique_ptr<resolved_expr> lhs, std::unique_ptr<resolved_expr> rhs)
+        : resolved_expr(loc, lhs->t), op(op), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+
+    ~resolved_binary_op() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
+struct resolved_grouping_expr : resolved_expr {
+    std::unique_ptr<resolved_expr> expr_;
+
+    resolved_grouping_expr(source_location loc, std::unique_ptr<resolved_expr> e) : resolved_expr(loc, e->t), expr_(std::move(e)) {}
+
+    ~resolved_grouping_expr() override = default;
 
     auto dump(usize level = 0) const -> void override;
 };
