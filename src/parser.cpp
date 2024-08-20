@@ -255,6 +255,14 @@ auto parser::parse_block() -> std::unique_ptr<block> {
 }
 
 auto parser::parse_stmt() -> std::unique_ptr<stmt> {
+    if (next_token.kind == token_kind::KwIf) {
+        return parse_if_stmt();
+    }
+
+    if (next_token.kind == token_kind::KwWhile) {
+        return parse_while_stmt();
+    }
+
     if (next_token.kind == token_kind::KwReturn) {
         return parse_return_stmt();
     }
@@ -270,6 +278,75 @@ auto parser::parse_stmt() -> std::unique_ptr<stmt> {
     eat_next(); // eat ';'
 
     return expr;
+}
+
+auto parser::parse_if_stmt() -> std::unique_ptr<if_stmt> {
+    auto loc = next_token.loc;
+    eat_next(); // eat 'if'
+
+    auto condition = parse_expr();
+    if (!condition) {
+        return nullptr;
+    }
+
+    if (next_token.kind != token_kind::Lbrace) {
+        return report(next_token.loc, "expected 'if' body");
+    }
+
+    auto true_block = parse_block();
+    if (!true_block) {
+        return nullptr;
+    }
+
+    if (next_token.kind != token_kind::KwElse) {
+        return std::make_unique<if_stmt>(loc, std::move(condition), std::move(true_block));
+    }
+
+    eat_next();
+
+    std::unique_ptr<block> false_block;
+    if (next_token.kind == token_kind::KwIf) {
+        auto else_if = parse_if_stmt();
+        if (!else_if) {
+            return nullptr;
+        }
+
+        auto else_if_loc = else_if->loc;
+        std::vector<std::unique_ptr<stmt>> stmts;
+        stmts.emplace_back(std::move(else_if));
+        false_block = std::make_unique<block>(loc, std::move(stmts));
+    } else {
+        if (next_token.kind != token_kind::Lbrace) {
+            return report(next_token.loc, "expected 'else' body");
+        }
+        false_block = parse_block();
+    }
+
+    if (!false_block) {
+        return nullptr;
+    }
+
+    return std::make_unique<if_stmt>(loc, std::move(condition), std::move(true_block), std::move(false_block));
+}
+
+auto parser::parse_while_stmt() -> std::unique_ptr<while_stmt> {
+    auto loc = next_token.loc;
+    eat_next(); // eat 'while'
+
+    auto cond = parse_expr();
+    if (!cond) {
+        return nullptr;
+    }
+
+    if (next_token.kind != token_kind::Lbrace) {
+        return report(next_token.loc, "expected 'while' body");
+    }
+
+    auto body = parse_block();
+    if (!body) {
+        return nullptr;
+    }
+    return std::make_unique<while_stmt>(loc, std::move(cond), std::move(body));
 }
 
 auto parser::parse_expr() -> std::unique_ptr<expr> {

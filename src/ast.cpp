@@ -50,6 +50,21 @@ auto block::dump(usize level) const -> void {
     }
 };
 
+auto if_stmt::dump(usize level) const -> void {
+    std::print(std::cerr, "{}IfStmt\n", indent(level));
+    condition->dump(level + 1);
+    true_block->dump(level + 1);
+    if (false_block) {
+        false_block->dump(level + 1);
+    }
+}
+
+auto while_stmt::dump(usize level) const -> void {
+    std::print(std::cerr, "{}WhileStmt\n", indent(level));
+    condition->dump(level + 1);
+    body->dump(level + 1);
+}
+
 auto param_decl::dump(usize level) const -> void { std::print(std::cerr, "{}ParamDecl: {}:{}\n", indent(level), identifier, type_.name); }
 
 auto function_decl::dump(usize level) const -> void {
@@ -143,4 +158,19 @@ auto resolved_grouping_expr::dump(usize level) const -> void {
     }
 
     expr_->dump(level + 1);
+}
+
+auto resolved_if_stmt::dump(usize level) const -> void {
+    std::print(std::cerr, "{}ResolvedIfStmt\n", indent(level));
+    condition->dump(level + 1);
+    true_block->dump(level + 1);
+    if (false_block) {
+        false_block->dump(level + 1);
+    }
+}
+
+auto resolved_while_stmt::dump(usize level) const -> void {
+    std::print(std::cerr, "{}ResolvedWhileStmt\n", indent(level));
+    condition->dump(level + 1);
+    body->dump(level + 1);
 }

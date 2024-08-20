@@ -118,6 +118,31 @@ struct block {
     auto dump(usize level = 0) const -> void;
 };
 
+struct if_stmt : stmt {
+    std::unique_ptr<expr> condition;
+    std::unique_ptr<block> true_block;
+    std::unique_ptr<block> false_block;
+
+    if_stmt(source_location loc, std::unique_ptr<expr> cond, std::unique_ptr<block> tblock, std::unique_ptr<block> fblock = nullptr)
+        : stmt(loc), condition(std::move(cond)), true_block(std::move(tblock)), false_block(std::move(fblock)) {}
+
+    ~if_stmt() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
+struct while_stmt : stmt {
+    std::unique_ptr<expr> condition;
+    std::unique_ptr<block> body;
+
+    while_stmt(source_location loc, std::unique_ptr<expr> cond, std::unique_ptr<block> body)
+        : stmt(loc), condition(std::move(cond)), body(std::move(body)) {}
+
+    ~while_stmt() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
 struct type {
     enum class kind { void_, number, custom };
 
@@ -300,6 +325,32 @@ struct resolved_grouping_expr : resolved_expr {
     resolved_grouping_expr(source_location loc, std::unique_ptr<resolved_expr> e) : resolved_expr(loc, e->t), expr_(std::move(e)) {}
 
     ~resolved_grouping_expr() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
+struct resolved_if_stmt : resolved_stmt {
+    std::unique_ptr<resolved_expr> condition;
+    std::unique_ptr<resolved_block> true_block;
+    std::unique_ptr<resolved_block> false_block;
+
+    resolved_if_stmt(source_location loc, std::unique_ptr<resolved_expr> cond, std::unique_ptr<resolved_block> tblock,
+                     std::unique_ptr<resolved_block> fblock = nullptr)
+        : resolved_stmt(loc), condition(std::move(cond)), true_block(std::move(tblock)), false_block(std::move(fblock)) {}
+
+    ~resolved_if_stmt() override = default;
+
+    auto dump(usize level = 0) const -> void override;
+};
+
+struct resolved_while_stmt : resolved_stmt {
+    std::unique_ptr<resolved_expr> condition;
+    std::unique_ptr<resolved_block> body;
+
+    resolved_while_stmt(source_location loc, std::unique_ptr<resolved_expr> cond, std::unique_ptr<resolved_block> body)
+        : resolved_stmt(loc), condition(std::move(cond)), true_block(std::move(tblock)) {}
+
+    ~resolved_while_stmt() override = default;
 
     auto dump(usize level = 0) const -> void override;
 };

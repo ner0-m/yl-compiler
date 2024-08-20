@@ -140,7 +140,62 @@ auto sema::resolve_stmt(const stmt &stmt) -> std::unique_ptr<resolved_stmt> {
         return resolve_return_stmt(*return_stmt);
     }
 
+    if (auto *if_stmt = dynamic_cast<const struct if_stmt *>(&stmt)) {
+        return resolve_if_stmt(*if_stmt);
+    }
+
+    if (auto *while_stmt = dynamic_cast<const struct while_stmt *>(&stmt)) {
+        return resolve_while_stmt(*while_stmt);
+    }
+
     __builtin_unreachable();
+}
+
+auto sema::resolve_if_stmt(const if_stmt &stmt) -> std::unique_ptr<resolved_if_stmt> {
+    auto condition = resolve_expr(*stmt.condition);
+
+    if (!condition) {
+        return nullptr;
+    }
+
+    if (condition->t.k != type::kind::number) {
+        return report(condition->loc, "expected number in condition");
+    }
+
+    auto res_true = resolve_block(*stmt.true_block);
+    if (!res_true) {
+        return nullptr;
+    }
+
+    std::unique_ptr<resolved_block> res_false;
+    if (stmt.false_block) {
+        res_false = resolve_block(*stmt.false_block);
+        if (!res_false) {
+            return nullptr;
+        }
+    }
+
+    condition->set_value(cee.evaluate(*condition, false));
+    return std::make_unique<resolved_if_stmt>(stmt.loc, std::move(condition), std::move(res_true), std::move(res_false));
+}
+
+auto sema::resolve_while_stmt(const while_stmt &stmt) -> std::unique_ptr<resolved_while_stmt> {
+    auto condition = resolve_expr(*stmt.condition);
+    if (!condition) {
+        return nullptr;
+    }
+
+    if (condition->t.k != type::kind::number) {
+        return report(condition->loc, "expected number in condition");
+    }
+
+    auto body = resolve_block(*stmt.body);
+    if (!body) {
+        return nullptr;
+    }
+
+    condition->set_value(cee.evaluate(*condition, false));
+    return std::make_unique<resolved_while_stmt>(stmt.loc, std::move(condition), std::move(body));
 }
 
 auto sema::resolve_return_stmt(const return_stmt &ret_stmt) -> std::unique_ptr<resolved_return_stmt> {

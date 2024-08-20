@@ -55,6 +55,14 @@ class parser {
     //   |   <returnStmt>
     auto parse_stmt() -> std::unique_ptr<stmt>;
 
+    // <ifStatement>
+    //   ::= 'if' <expr> <block> ('else' (<ifStatement> | <block>))?
+    auto parse_if_stmt() -> std::unique_ptr<if_stmt>;
+
+    // <whileStatement>
+    //   ::= 'while' <expr> <block>
+    auto parse_while_stmt() -> std::unique_ptr<while_stmt>;
+
     // <returnStmt>
     //   ::= 'return' <expr> ';'
     auto parse_return_stmt() -> std::unique_ptr<return_stmt>;

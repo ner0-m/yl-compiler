@@ -132,7 +132,66 @@ auto codegen::gen_stmt(const resolved_stmt &stmt) -> llvm::Value * {
         return gen_return_stmt(*ret_stmt);
     }
 
+    if (auto *if_stmt = dynamic_cast<const resolved_if_stmt *>(&stmt)) {
+        return gen_if_stmt(*if_stmt);
+    }
+
+    if (auto *while_stmt = dynamic_cast<const resolved_while_stmt *>(&stmt)) {
+        return gen_while_stmt(*while_stmt);
+    }
+
     llvm_unreachable("unknown statement");
+}
+
+auto codegen::gen_if_stmt(const resolved_if_stmt &stmt) -> llvm::Value * {
+    auto *function = cur_fn();
+
+    auto *true_bb = llvm::BasicBlock::Create(context, "if.true", function);
+    auto *exit_bb = llvm::BasicBlock::Create(context, "if.exit", function);
+
+    auto *else_bb = exit_bb;
+    if (stmt.false_block) {
+        else_bb = llvm::BasicBlock::Create(context, "if.else", function);
+    }
+
+    auto *cond = gen_expr(*stmt.condition);
+    builder.CreateCondBr(b2d(cond), true_bb, else_bb);
+
+    true_bb->insertInto(function);
+    builder.SetInsertPoint(true_bb);
+    gen_block(*stmt.true_block);
+    builder.CreateBr(exit_bb);
+
+    if (stmt.false_block) {
+        else_bb->insertInto(function);
+        builder.SetInsertPoint(else_bb);
+        gen_block(*stmt.false_block);
+        builder.CreateBr(exit_bb);
+    }
+
+    exit_bb->insertInto(function);
+    builder.SetInsertPoint(exit_bb);
+    return nullptr;
+}
+
+auto codegen::gen_while_stmt(const resolved_while_stmt &stmt) -> llvm::Value * {
+    auto *function = cur_fn();
+
+    auto *header = llvm::BasicBlock::Create(context, "while.cond", function);
+    auto *body = llvm::BasicBlock::Create(context, "while.body", function);
+    auto *exit = llvm::BasicBlock::Create(context, "while.exit", function);
+
+    builder.CreateBr(header);
+    builder.SetInsertPoint(header);
+    auto *cond = gen_expr(*stmt.condition);
+    builder.CreateCondBr(d2b(cond), body, exit);
+
+    builder.SetInsertPoint(body);
+    gen_block(*stmt.body);
+    builder.CreateBr(header);
+
+    builder.SetInsertPoint(exit);
+    return nullptr;
 }
 
 auto codegen::gen_expr(const resolved_expr &expr) -> llvm::Value * {

@@ -26,6 +26,9 @@ enum class token_kind : char {
     KwVoid,
     KwReturn,
     KwNumber,
+    KwIf,
+    KwElse,
+    KwWhile,
 
     Eof = singleCharTokens[0],
     Lpar = singleCharTokens[1],
@@ -46,10 +49,10 @@ enum class token_kind : char {
 auto token_kind_to_string(token_kind kind) -> std::string;
 
 const std::unordered_map<std::string_view, token_kind> keywords = {
-    {"fn", token_kind::KwFn},
-    {"void", token_kind::KwVoid},
-    {"return", token_kind::KwReturn},
-    {"number", token_kind::KwNumber},
+    {"fn", token_kind::KwFn},         {"void", token_kind::KwVoid}, {"return", token_kind::KwReturn},
+    {"number", token_kind::KwNumber}, {"if", token_kind::KwIf},
+    {"else", token_kind::KwElse},
+    {"while", token_kind::KwWhile},
 };
 
 struct token {

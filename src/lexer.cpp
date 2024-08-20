@@ -14,6 +14,12 @@ auto token_kind_to_string(token_kind kind) -> std::string {
         return "return";
     case (token_kind::KwNumber):
         return "number";
+    case (token_kind::KwIf):
+        return "if";
+    case (token_kind::KwElse):
+        return "else";
+    case (token_kind::KwWhile):
+        return "while";
     case (token_kind::Number):
         return "<number>";
     case (token_kind::EqualEqual):
