@@ -348,7 +348,7 @@ struct resolved_while_stmt : resolved_stmt {
     std::unique_ptr<resolved_block> body;
 
     resolved_while_stmt(source_location loc, std::unique_ptr<resolved_expr> cond, std::unique_ptr<resolved_block> body)
-        : resolved_stmt(loc), condition(std::move(cond)), true_block(std::move(tblock)) {}
+        : resolved_stmt(loc), condition(std::move(cond)), body(std::move(body)) {}
 
     ~resolved_while_stmt() override = default;
 

@@ -1,3 +1,4 @@
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -5,7 +6,10 @@
 
 #include "llvm/IR/Module.h"
 
+#include "backward.hpp"
+
 #include "ast.h"
+#include "cfg.h"
 #include "codegen.h"
 #include "lexer.h"
 #include "parser.h"
@@ -20,7 +24,8 @@ void displayHelp() {
                "  -o <file>    write executable to <file>\n"
                "  -ast-dump    print the abstract syntax tree\n"
                "  -res-dump    print the resolved syntax tree\n"
-               "  -llvm-dump   print the llvm module\n");
+               "  -llvm-dump   print the llvm module\n"
+               "  -cfg-dump    print the control flow graph\n");
 }
 
 [[noreturn]] void error(std::string_view msg) {
@@ -36,6 +41,7 @@ struct CompilerOptions {
     bool astDump = false;
     bool resDump = false;
     bool llvmDump = false;
+    bool cfgDump = false;
 };
 
 CompilerOptions parseArguments(int argc, const char **argv) {
@@ -62,6 +68,8 @@ CompilerOptions parseArguments(int argc, const char **argv) {
                 options.resDump = true;
             else if (arg == "-llvm-dump")
                 options.llvmDump = true;
+            else if (arg == "-cfg-dump")
+                options.cfgDump = true;
             else
                 error("unexpected option '" + std::string(arg) + '\'');
         }
@@ -73,6 +81,8 @@ CompilerOptions parseArguments(int argc, const char **argv) {
 }
 
 int main(int argc, const char **argv) {
+    backward::SignalHandling sh;
+
     CompilerOptions options = parseArguments(argc, argv);
 
     if (options.displayHelp) {
@@ -120,6 +130,14 @@ int main(int argc, const char **argv) {
         for (auto &&fn : resolvedTree) {
             fn->dump();
         }
+        return 0;
+    }
+
+    if (options.cfgDump) {
+            for (auto &&fn : resolvedTree) {
+                std::print(std::cerr, "{}:\n", fn->identifier);
+                cfg_builder().build(*fn).dump();
+            }
         return 0;
     }
 

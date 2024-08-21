@@ -116,7 +116,7 @@ void resolved_call_expr::dump(usize level) const {
 }
 
 auto resolved_block::dump(usize level) const -> void {
-    std::print(std::cerr, "{}ResolvedBlock: \n", indent(level));
+    std::print(std::cerr, "{}ResolvedBlock \n", indent(level));
 
     for (auto &&stmt : stmts) {
         stmt->dump(level + 1);
@@ -124,7 +124,7 @@ auto resolved_block::dump(usize level) const -> void {
 }
 
 auto resolved_return_stmt::dump(usize level) const -> void {
-    std::print(std::cerr, "{}ResolvedReturnStmt: \n", indent(level));
+    std::print(std::cerr, "{}ResolvedReturnStmt \n", indent(level));
 
     if (expr) {
         expr->dump(level + 1);
@@ -141,7 +141,7 @@ auto resolved_unary_op::dump(usize level) const -> void {
 }
 
 auto resolved_binary_op::dump(usize level) const -> void {
-    std::print(std::cerr, "{}ResolvedBinaryOperator: {}\n", indent(level), token_kind_to_string(op));
+    std::print(std::cerr, "{}ResolvedBinaryOperator: '{}'\n", indent(level), token_kind_to_string(op));
     if (auto val = get_value()) {
         std::cerr << std::format("{}| value: {}\n", indent(level), *val);
     }

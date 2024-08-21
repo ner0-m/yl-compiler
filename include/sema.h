@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "ast.h"
+#include "cfg.h"
 #include "constexpr.h"
 
 class sema {
@@ -22,6 +23,10 @@ class sema {
 
         ~scope_raii() { sema->scopes.pop_back(); }
     };
+
+    auto check_return_on_all_paths(const resolved_function_decl &fn, const cfg &graph) const -> bool;
+
+    auto flow_sensitive_checks(const resolved_function_decl &fn) const -> bool;
 
     auto lookupDecl(const std::string &id) const -> std::pair<resolved_decl *, int>;
 

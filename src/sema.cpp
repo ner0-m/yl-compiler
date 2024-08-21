@@ -1,5 +1,57 @@
 #include "sema.h"
+#include "cfg.h"
 #include "utils.h"
+
+auto sema::flow_sensitive_checks(const resolved_function_decl &fn) const -> bool {
+    cfg graph = cfg_builder().build(fn);
+
+    bool error = false;
+    error |= check_return_on_all_paths(fn, graph);
+    return error;
+}
+
+auto sema::check_return_on_all_paths(const resolved_function_decl &fn, const cfg &graph) const -> bool {
+    if (fn.type_.k == type::kind::void_) {
+        return false;
+    }
+
+    std::set<i32> visited;
+    std::vector<i32> worklist;
+    worklist.emplace_back(graph.entry);
+
+    bool exit_reached = false;
+    i32 return_count = 0;
+    while (!worklist.empty()) {
+        auto bb = worklist.back();
+        worklist.pop_back();
+
+        if (visited.contains(bb)) {
+            continue;
+        }
+
+        exit_reached |= bb == graph.exit;
+
+        const auto &[preds, succs, stmts] = graph.basic_blocks[bb];
+
+        if (!stmts.empty() && dynamic_cast<const resolved_return_stmt *>(stmts[0])) {
+            ++return_count;
+            continue;
+        }
+
+        for (auto &&[succ, reachable] : succs) {
+            if (reachable) {
+                worklist.emplace_back(succ);
+            }
+        }
+    }
+
+    if (exit_reached || return_count == 0) {
+        report(fn.loc,
+               return_count > 0 ? "non-void function doesn't return a value on every path" : "non-void function doesn't return a value");
+    }
+
+    return exit_reached || return_count == 0;
+}
 
 auto sema::resolve_ast() -> std::vector<std::unique_ptr<resolved_function_decl>> {
     std::vector<std::unique_ptr<resolved_function_decl>> resolved_tree;
@@ -40,6 +92,7 @@ auto sema::resolve_ast() -> std::vector<std::unique_ptr<resolved_function_decl>>
         }
 
         cur_fn->body = std::move(resolved_body);
+        error |= flow_sensitive_checks(*cur_fn);
     }
 
     if (error) {
