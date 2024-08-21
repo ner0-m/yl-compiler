@@ -51,9 +51,21 @@ class parser {
     auto parse_block() -> std::unique_ptr<block>;
 
     // <statement>
-    //   ::= <expr> ';'
-    //   |   <returnStmt>
+    //  ::= <expr> ';'
+    //  |   <returnStmt>
+    //  |   <ifStatement>
+    //  |   <whileStatement>
+    //  |   <assignment>
+    //  |   <declStmt>
     auto parse_stmt() -> std::unique_ptr<stmt>;
+
+    // <declStmt>
+    //  ::= ('let'|'var') <varDecl>  ';'
+    auto parse_decl_stmt() -> std::unique_ptr<decl_stmt>;
+
+    // <varDecl>
+    //  ::= <identifier> (':' <type>)? ('=' <expr>)?
+    auto parse_var_decl(bool is_let) -> std::unique_ptr<var_decl>;
 
     // <ifStatement>
     //   ::= 'if' <expr> <block> ('else' (<ifStatement> | <block>))?

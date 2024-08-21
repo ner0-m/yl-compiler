@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <format>
 #include <string>
 #include <string_view>
 
@@ -28,6 +29,14 @@ struct source_location {
     std::string_view file;
     u64 line;
     u64 col;
+};
+
+template <> struct std::formatter<source_location> {
+    constexpr auto parse(std::format_parse_context &ctx) { return ctx.begin(); }
+
+    auto format(const source_location &loc, std::format_context &ctx) const {
+        return std::format_to(ctx.out(), "{}:{}:{}", loc.file, loc.line, loc.col);
+    }
 };
 
 auto is_space(i8 c) -> bool;

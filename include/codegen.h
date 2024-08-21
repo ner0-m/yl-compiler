@@ -41,6 +41,8 @@ class codegen {
 
     auto gen_while_stmt(const resolved_while_stmt &stmt) -> llvm::Value *;
 
+    auto gen_decl_stmt(const resolved_decl_stmt &stmt) -> llvm::Value *;
+
     auto gen_expr(const resolved_expr &stmt) -> llvm::Value *;
 
     auto gen_unary_op(const resolved_unary_op &op) -> llvm::Value *;

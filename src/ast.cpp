@@ -65,6 +65,23 @@ auto while_stmt::dump(usize level) const -> void {
     body->dump(level + 1);
 }
 
+auto var_decl::dump(usize level) const -> void {
+    std::print(std::cerr, "{}VarDecl: {}", indent(level), identifier);
+    if (type_) {
+        std::print(std::cerr, ":{}", type_->name);
+    }
+    std::print(std::cerr, "\n");
+
+    if (initializer) {
+        initializer->dump(level + 1);
+    }
+}
+
+auto decl_stmt::dump(usize level) const -> void {
+    std::print(std::cerr, "{}DeclStmt:\n", indent(level));
+    var->dump(level + 1);
+}
+
 auto param_decl::dump(usize level) const -> void { std::print(std::cerr, "{}ParamDecl: {}:{}\n", indent(level), identifier, type_.name); }
 
 auto function_decl::dump(usize level) const -> void {
@@ -173,4 +190,17 @@ auto resolved_while_stmt::dump(usize level) const -> void {
     std::print(std::cerr, "{}ResolvedWhileStmt\n", indent(level));
     condition->dump(level + 1);
     body->dump(level + 1);
+}
+
+auto resolved_var_decl::dump(usize level) const -> void {
+    std::print(std::cerr, "{}ResolvedVarDecl: @({}) {}:\n", indent(level), static_cast<const void *>(this), identifier);
+
+    if (initializer) {
+        initializer->dump(level + 1);
+    }
+}
+
+auto resolved_decl_stmt::dump(usize level) const -> void {
+    std::print(std::cerr, "{}ResolvedDeclStmt:\n", indent(level));
+    var->dump(level + 1);
 }

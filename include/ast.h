@@ -170,6 +170,29 @@ struct decl {
     virtual auto dump(usize indent) const -> void = 0;
 };
 
+struct var_decl : decl {
+    std::optional<type> type_;
+    std::unique_ptr<expr> initializer;
+    bool is_mutable;
+
+    var_decl(source_location loc, std::string identifier, std::optional<type> t, bool is_mutable, std::unique_ptr<expr> init = nullptr)
+        : decl(loc, std::move(identifier)), type_(t), is_mutable(is_mutable), initializer(std::move(init)) {}
+
+    ~var_decl() override = default;
+
+    auto dump(usize level) const -> void override;
+};
+
+struct decl_stmt : stmt {
+    std::unique_ptr<var_decl> var;
+
+    decl_stmt(source_location loc, std::unique_ptr<var_decl> var) : stmt(loc), var(std::move(var)) {}
+
+    ~decl_stmt() override = default;
+
+    auto dump(usize level) const -> void override;
+};
+
 struct param_decl : decl {
     type type_;
 
@@ -177,7 +200,7 @@ struct param_decl : decl {
 
     ~param_decl() override = default;
 
-    auto dump(usize level = 0) const -> void override;
+    auto dump(usize level) const -> void override;
 };
 
 struct function_decl : decl {
@@ -353,4 +376,26 @@ struct resolved_while_stmt : resolved_stmt {
     ~resolved_while_stmt() override = default;
 
     auto dump(usize level = 0) const -> void override;
+};
+
+struct resolved_var_decl : resolved_decl {
+    std::unique_ptr<resolved_expr> initializer;
+    bool is_mutable;
+
+    resolved_var_decl(source_location loc, std::string identifier, type t, bool is_mutable, std::unique_ptr<resolved_expr> init = nullptr)
+        : resolved_decl(loc, std::move(identifier), t), is_mutable(is_mutable), initializer(std::move(init)) {}
+
+    ~resolved_var_decl() override = default;
+
+    auto dump(usize level) const -> void override;
+};
+
+struct resolved_decl_stmt : resolved_stmt {
+    std::unique_ptr<resolved_var_decl> var;
+
+    resolved_decl_stmt(source_location loc, std::unique_ptr<resolved_var_decl> var) : resolved_stmt(loc), var(std::move(var)) {}
+
+    ~resolved_decl_stmt() override = default;
+
+    auto dump(usize level) const -> void override;
 };

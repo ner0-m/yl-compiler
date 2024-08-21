@@ -44,6 +44,10 @@ class sema {
 
     auto resolve_stmt(const stmt &stmt) -> std::unique_ptr<resolved_stmt>;
 
+    auto resolve_decl_stmt(const decl_stmt &stmt) -> std::unique_ptr<resolved_decl_stmt>;
+
+    auto resolve_var_decl(const var_decl &stmt) -> std::unique_ptr<resolved_var_decl>;
+
     auto resolve_if_stmt(const if_stmt &stmt) -> std::unique_ptr<resolved_if_stmt>;
 
     auto resolve_while_stmt(const while_stmt &stmt) -> std::unique_ptr<resolved_while_stmt>;

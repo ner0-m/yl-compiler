@@ -267,6 +267,10 @@ auto parser::parse_stmt() -> std::unique_ptr<stmt> {
         return parse_return_stmt();
     }
 
+    if (next_token.kind == token_kind::KwLet || next_token.kind == token_kind::KwVar) {
+        return parse_decl_stmt();
+    }
+
     auto expr = parse_expr();
     if (!expr) {
         return nullptr;
@@ -278,6 +282,57 @@ auto parser::parse_stmt() -> std::unique_ptr<stmt> {
     eat_next(); // eat ';'
 
     return expr;
+}
+
+auto parser::parse_decl_stmt() -> std::unique_ptr<decl_stmt> {
+    auto tok = next_token;
+
+    eat_next(); // eat 'var' or 'let'
+
+    if (next_token.kind != token_kind::Identifier) {
+        return report(next_token.loc, "expected identifier");
+    }
+
+    auto vardecl = parse_var_decl(tok.kind == token_kind::KwLet);
+    if (!vardecl) {
+        return nullptr;
+    }
+
+    if (next_token.kind != token_kind::Semi) {
+        return report(next_token.loc, "expected ';' after declaration");
+    }
+    eat_next(); // eat ';'
+
+    return std::make_unique<decl_stmt>(tok.loc, std::move(vardecl));
+}
+
+auto parser::parse_var_decl(bool is_let) -> std::unique_ptr<var_decl> {
+    auto loc = next_token.loc;
+
+    auto id = *next_token.value;
+    eat_next(); // eat identifier
+
+    std::optional<type> t;
+    if (next_token.kind == token_kind::Colon) {
+        eat_next(); // eat ':'
+
+        t = parse_type();
+        if (!t.has_value()) {
+            return nullptr;
+        }
+    }
+
+    if (next_token.kind != token_kind::Equal) {
+        return std::make_unique<var_decl>(loc, id, t, !is_let);
+    }
+
+    eat_next(); // eat '='
+
+    auto init = parse_expr();
+    if(!init) {
+        return nullptr;
+    }
+    return std::make_unique<var_decl>(loc, id, t, !is_let, std::move(init));
 }
 
 auto parser::parse_if_stmt() -> std::unique_ptr<if_stmt> {

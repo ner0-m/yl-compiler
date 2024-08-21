@@ -22,17 +22,25 @@ auto cfg_builder::insert_block(const resolved_block &block, usize succ) -> usize
 }
 
 auto cfg_builder::insert_stmt(const resolved_stmt &stmt, usize block) -> usize {
-    if (auto *if_stmt = dynamic_cast<const resolved_if_stmt *>(&stmt))
+    if (auto *if_stmt = dynamic_cast<const resolved_if_stmt *>(&stmt)) {
         return insert_if_stmt(*if_stmt, block);
+    }
 
-    if (auto *while_stmt = dynamic_cast<const resolved_while_stmt *>(&stmt))
+    if (auto *while_stmt = dynamic_cast<const resolved_while_stmt *>(&stmt)) {
         return insert_while_stmt(*while_stmt, block);
+    }
 
-    if (auto *expr = dynamic_cast<const resolved_expr *>(&stmt))
+    if (auto *expr = dynamic_cast<const resolved_expr *>(&stmt)) {
         return insert_expr(*expr, block);
+    }
 
-    if (auto *return_stmt = dynamic_cast<const resolved_return_stmt *>(&stmt))
+    if (auto *return_stmt = dynamic_cast<const resolved_return_stmt *>(&stmt)) {
         return insert_return_stmt(*return_stmt, block);
+    }
+
+    if (auto *decl_stmt = dynamic_cast<const resolved_decl_stmt *>(&stmt)) {
+        return insert_decl_stmt(*decl_stmt, block);
+    }
 
     llvm_unreachable("unexpected expression");
 }
@@ -103,6 +111,16 @@ auto cfg_builder::insert_return_stmt(const resolved_return_stmt &stmt, usize blo
     graph.insert_stmt(&stmt, block);
     if (stmt.expr) {
         return insert_expr(*stmt.expr, block);
+    }
+
+    return block;
+}
+
+auto cfg_builder::insert_decl_stmt(const resolved_decl_stmt &stmt, usize block) -> usize {
+    graph.insert_stmt(&stmt, block);
+
+    if (const auto &init = stmt.var->initializer) {
+        return insert_expr(*stmt.var->initializer, block);
     }
 
     return block;

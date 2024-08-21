@@ -140,7 +140,26 @@ auto codegen::gen_stmt(const resolved_stmt &stmt) -> llvm::Value * {
         return gen_while_stmt(*while_stmt);
     }
 
+    if (auto *decl_stmt = dynamic_cast<const resolved_decl_stmt *>(&stmt)) {
+        return gen_decl_stmt(*decl_stmt);
+    }
+
     llvm_unreachable("unknown statement");
+}
+
+auto codegen::gen_decl_stmt(const resolved_decl_stmt &stmt) -> llvm::Value * {
+    auto *fn = cur_fn();
+
+    const auto *decl = stmt.var.get();
+
+    llvm::AllocaInst *var = allocate_stack_variable(fn, stmt.var->identifier);
+
+    if (const auto &init = decl->initializer) {
+        builder.CreateStore(gen_expr(*init), var);
+    }
+
+    declarations[decl] = var;
+    return nullptr;
 }
 
 auto codegen::gen_if_stmt(const resolved_if_stmt &stmt) -> llvm::Value * {

@@ -20,8 +20,14 @@ auto token_kind_to_string(token_kind kind) -> std::string {
         return "else";
     case (token_kind::KwWhile):
         return "while";
+    case (token_kind::KwVar):
+        return "var";
+    case (token_kind::KwLet):
+        return "let";
     case (token_kind::Number):
         return "<number>";
+    case (token_kind::Equal):
+        return "=";
     case (token_kind::EqualEqual):
         return "==";
     case (token_kind::AmpAmp):
@@ -77,7 +83,10 @@ auto lexer::next_token() -> token {
         }
     }
 
-    if (cur == '=' && peek() == '=') {
+    if (cur == '=') {
+        if (peek() != '=') {
+            return token{loc, token_kind::Equal};
+        }
         eat_next();
         return token{loc, token_kind::EqualEqual};
     }

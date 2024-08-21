@@ -197,11 +197,58 @@ auto sema::resolve_stmt(const stmt &stmt) -> std::unique_ptr<resolved_stmt> {
         return resolve_if_stmt(*if_stmt);
     }
 
+    if (auto *declstmt = dynamic_cast<const decl_stmt *>(&stmt)) {
+        return resolve_decl_stmt(*declstmt);
+    }
+
     if (auto *while_stmt = dynamic_cast<const struct while_stmt *>(&stmt)) {
         return resolve_while_stmt(*while_stmt);
     }
 
     __builtin_unreachable();
+}
+
+auto sema::resolve_decl_stmt(const decl_stmt &stmt) -> std::unique_ptr<resolved_decl_stmt> {
+    auto res_var_decl = resolve_var_decl(*stmt.var);
+    if (!res_var_decl) {
+        return nullptr;
+    }
+
+    if (!insert_to_cur_scope(*res_var_decl)) {
+        return nullptr;
+    }
+
+    return std::make_unique<resolved_decl_stmt>(stmt.loc, std::move(res_var_decl));
+}
+
+auto sema::resolve_var_decl(const var_decl &var) -> std::unique_ptr<resolved_var_decl> {
+    if (!var.type_ && !var.initializer) {
+        return report(var.loc, "an uninitialized variable is expected to have a type specifier");
+    }
+
+    std::unique_ptr<resolved_expr> res_init = nullptr;
+    if (var.initializer) {
+        res_init = resolve_expr(*var.initializer);
+        if (!res_init) {
+            return nullptr;
+        }
+    }
+
+    auto resolvable_type = var.type_.value_or(res_init->t);
+    auto type = resolve_type(resolvable_type);
+
+    if (!type || type->k == type::kind::void_) {
+        return report(var.loc, std::format("variable '{}' has invalid '{}' type", var.identifier, resolvable_type.name));
+    }
+
+    if (res_init) {
+        if (res_init->t.k != type->k)
+            return report(res_init->loc, "initializer type mismatch");
+
+        res_init->set_value(cee.evaluate(*res_init, false));
+    }
+
+    return std::make_unique<resolved_var_decl>(var.loc, var.identifier, *type, var.is_mutable, std::move(res_init));
 }
 
 auto sema::resolve_if_stmt(const if_stmt &stmt) -> std::unique_ptr<resolved_if_stmt> {

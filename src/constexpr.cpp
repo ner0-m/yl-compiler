@@ -24,7 +24,21 @@ auto constant_expression_evaluator::evaluate(const resolved_expr &expr, bool all
         return eval_binary_op(*bop, allow_side_effects);
     }
 
+    if (auto *decl_ref_expr = dynamic_cast<const resolved_decl_ref_expr *>(&expr)) {
+        return eval_decl_ref_expr(*decl_ref_expr, allow_side_effects);
+    }
+
     return {};
+}
+
+auto constant_expression_evaluator::eval_decl_ref_expr(const resolved_decl_ref_expr &dre,
+                                                       bool allow_side_effects) const -> std::optional<double> {
+    const auto *rvd = dynamic_cast<const resolved_var_decl *>(dre.decl);
+    if (!rvd || rvd->is_mutable || !rvd->initializer) {
+        return std::nullopt;
+    }
+
+    return evaluate(*rvd->initializer, allow_side_effects);
 }
 
 auto constant_expression_evaluator::eval_unary_op(const resolved_unary_op &uop, bool allow_side_effects) const -> std::optional<double> {

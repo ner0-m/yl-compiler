@@ -134,10 +134,10 @@ int main(int argc, const char **argv) {
     }
 
     if (options.cfgDump) {
-            for (auto &&fn : resolvedTree) {
-                std::print(std::cerr, "{}:\n", fn->identifier);
-                cfg_builder().build(*fn).dump();
-            }
+        for (auto &&fn : resolvedTree) {
+            std::print(std::cerr, "{}:\n", fn->identifier);
+            cfg_builder().build(*fn).dump();
+        }
         return 0;
     }
 
