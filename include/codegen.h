@@ -41,6 +41,8 @@ class codegen {
 
     auto gen_while_stmt(const resolved_while_stmt &stmt) -> llvm::Value *;
 
+    auto gen_assignment(const resolved_assignment &stmt) -> llvm::Value *;
+
     auto gen_decl_stmt(const resolved_decl_stmt &stmt) -> llvm::Value *;
 
     auto gen_expr(const resolved_expr &stmt) -> llvm::Value *;
@@ -67,7 +69,7 @@ class codegen {
 
   public:
     codegen(std::vector<std::unique_ptr<resolved_function_decl>> tree, std::string_view source_path)
-        : resolved_tree(std::move(tree)), context(), builder(context), module("<translation unit>", context) {
+        : resolved_tree(std::move(tree)), context(), builder(context), module("<translation_unit>", context) {
         module.setSourceFileName(source_path);
         module.setTargetTriple(llvm::sys::getDefaultTargetTriple());
     }

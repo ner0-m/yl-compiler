@@ -1,4 +1,5 @@
 #include "codegen.h"
+
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/Support/ErrorHandling.h>
@@ -50,48 +51,47 @@ auto codegen::gen_fn_decl(const resolved_function_decl &fn) -> void {
     }
 
     auto *type = llvm::FunctionType::get(ret_type, param_types, false);
-
     llvm::Function::Create(type, llvm::Function::ExternalLinkage, fn.identifier, module);
 }
 
-auto codegen::gen_fn_body(const resolved_function_decl &fn) -> void {
-    auto *llvm_fn = module.getFunction(fn.identifier);
+auto codegen::gen_fn_body(const resolved_function_decl &fn_decl) -> void {
+    auto *fn = module.getFunction(fn_decl.identifier);
 
-    auto *entryBB = llvm::BasicBlock::Create(context, "entry", llvm_fn);
+    auto *entryBB = llvm::BasicBlock::Create(context, "entry", fn);
     builder.SetInsertPoint(entryBB);
 
     llvm::Value *undef = llvm::UndefValue::get(builder.getInt32Ty());
     alloca_insert_point = new llvm::BitCastInst(undef, undef->getType(), "alloca.placeholder", entryBB);
 
-    bool is_void = fn.type_.k == type::kind::void_;
+    bool is_void = fn_decl.type_.k == type::kind::void_;
 
     if (!is_void) {
-        ret_val = allocate_stack_variable(llvm_fn, "retval");
+        ret_val = allocate_stack_variable(fn, "retval");
     }
 
     ret_bb = llvm::BasicBlock::Create(context, "return");
 
     u32 idx = 0;
-    for (auto &&arg : llvm_fn->args()) {
-        const auto *param_decl = fn.params[idx].get();
+    for (auto &&arg : fn->args()) {
+        const auto *param_decl = fn_decl.params[idx].get();
         arg.setName(param_decl->identifier);
 
-        llvm::Value *var = allocate_stack_variable(llvm_fn, fn.identifier);
+        llvm::Value *var = allocate_stack_variable(fn, param_decl->identifier);
         builder.CreateStore(&arg, var);
 
         declarations[param_decl] = var;
         ++idx;
     }
 
-    if (fn.identifier == "println") {
-        gen_builtin_print_body(fn);
+    if (fn_decl.identifier == "println") {
+        gen_builtin_print_body(fn_decl);
     } else {
-        gen_block(*fn.body);
+        gen_block(*fn_decl.body);
     }
 
     if (ret_bb->hasNPredecessorsOrMore(1)) {
         builder.CreateBr(ret_bb);
-        ret_bb->insertInto(llvm_fn);
+        ret_bb->insertInto(fn);
         builder.SetInsertPoint(ret_bb);
     }
 
@@ -128,23 +128,31 @@ auto codegen::gen_stmt(const resolved_stmt &stmt) -> llvm::Value * {
         return gen_expr(*expr);
     }
 
-    if (auto *ret_stmt = dynamic_cast<const resolved_return_stmt *>(&stmt)) {
-        return gen_return_stmt(*ret_stmt);
-    }
-
     if (auto *if_stmt = dynamic_cast<const resolved_if_stmt *>(&stmt)) {
         return gen_if_stmt(*if_stmt);
-    }
-
-    if (auto *while_stmt = dynamic_cast<const resolved_while_stmt *>(&stmt)) {
-        return gen_while_stmt(*while_stmt);
     }
 
     if (auto *decl_stmt = dynamic_cast<const resolved_decl_stmt *>(&stmt)) {
         return gen_decl_stmt(*decl_stmt);
     }
 
+    if (auto *assignment = dynamic_cast<const resolved_assignment *>(&stmt)) {
+        return gen_assignment(*assignment);
+    }
+
+    if (auto *while_stmt = dynamic_cast<const resolved_while_stmt *>(&stmt)) {
+        return gen_while_stmt(*while_stmt);
+    }
+
+    if (auto *ret_stmt = dynamic_cast<const resolved_return_stmt *>(&stmt)) {
+        return gen_return_stmt(*ret_stmt);
+    }
+
     llvm_unreachable("unknown statement");
+}
+
+auto codegen::gen_assignment(const resolved_assignment &stmt) -> llvm::Value * {
+    return builder.CreateStore(gen_expr(*stmt.e), declarations[stmt.variable->decl]);
 }
 
 auto codegen::gen_decl_stmt(const resolved_decl_stmt &stmt) -> llvm::Value * {
@@ -165,16 +173,16 @@ auto codegen::gen_decl_stmt(const resolved_decl_stmt &stmt) -> llvm::Value * {
 auto codegen::gen_if_stmt(const resolved_if_stmt &stmt) -> llvm::Value * {
     auto *function = cur_fn();
 
-    auto *true_bb = llvm::BasicBlock::Create(context, "if.true", function);
-    auto *exit_bb = llvm::BasicBlock::Create(context, "if.exit", function);
+    auto *true_bb = llvm::BasicBlock::Create(context, "if.true");
+    auto *exit_bb = llvm::BasicBlock::Create(context, "if.exit");
 
     auto *else_bb = exit_bb;
     if (stmt.false_block) {
-        else_bb = llvm::BasicBlock::Create(context, "if.else", function);
+        else_bb = llvm::BasicBlock::Create(context, "if.false");
     }
 
     auto *cond = gen_expr(*stmt.condition);
-    builder.CreateCondBr(b2d(cond), true_bb, else_bb);
+    builder.CreateCondBr(d2b(cond), true_bb, else_bb);
 
     true_bb->insertInto(function);
     builder.SetInsertPoint(true_bb);
@@ -217,7 +225,6 @@ auto codegen::gen_expr(const resolved_expr &expr) -> llvm::Value * {
     if (auto val = expr.get_value()) {
         return llvm::ConstantFP::get(builder.getDoubleTy(), *val);
     }
-
     if (auto *number = dynamic_cast<const resolved_number_literal *>(&expr)) {
         return llvm::ConstantFP::get(builder.getDoubleTy(), number->value);
     }
@@ -259,44 +266,54 @@ auto codegen::gen_unary_op(const resolved_unary_op &op) -> llvm::Value * {
     return nullptr;
 }
 
-auto codegen::gen_binary_op(const resolved_binary_op &op) -> llvm::Value * {
-    auto kind = op.op;
+auto codegen::gen_binary_op(const resolved_binary_op &binop) -> llvm::Value * {
+    auto kind = binop.op;
 
     if (kind == token_kind::AmpAmp || kind == token_kind::PipePipe) {
         llvm::Function *function = cur_fn();
         bool isOr = kind == token_kind::PipePipe;
 
-        auto *rhs_tag = isOr ? "or.rhs" : "and.rhs";
-        auto *merge_tag = isOr ? "or.merge" : "and.merge";
+        auto *rhsTag = isOr ? "or.rhs" : "and.rhs";
+        auto *mergeTag = isOr ? "or.merge" : "and.merge";
 
-        auto *rhs_block = llvm::BasicBlock::Create(context, rhs_tag, function);
-        auto *merge_block = llvm::BasicBlock::Create(context, merge_tag, function);
+        auto *rhsBB = llvm::BasicBlock::Create(context, rhsTag, function);
+        auto *mergeBB = llvm::BasicBlock::Create(context, mergeTag, function);
 
-        auto *true_block = isOr ? merge_block : rhs_block;
-        auto *false_block = isOr ? rhs_block : merge_block;
-        gen_conditional_op(*op.lhs, true_block, false_block);
+        llvm::BasicBlock *trueBB = isOr ? mergeBB : rhsBB;
+        llvm::BasicBlock *falseBB = isOr ? rhsBB : mergeBB;
+        gen_conditional_op(*binop.lhs, trueBB, falseBB);
 
-        builder.SetInsertPoint(rhs_block);
-        auto *rhs = d2b(gen_expr(*op.rhs));
-        builder.CreateBr(merge_block);
+        builder.SetInsertPoint(rhsBB);
+        llvm::Value *rhs = d2b(gen_expr(*binop.rhs));
+        builder.CreateBr(mergeBB);
 
-        rhs_block = builder.GetInsertBlock();
-        builder.SetInsertPoint(merge_block);
+        rhsBB = builder.GetInsertBlock();
+        builder.SetInsertPoint(mergeBB);
         llvm::PHINode *phi = builder.CreatePHI(builder.getInt1Ty(), 2);
 
-        for (auto it = pred_begin(merge_block); it != pred_end(merge_block); ++it) {
-            if (*it == rhs_block)
-                phi->addIncoming(rhs, rhs_block);
-            else
+        for (auto it = pred_begin(mergeBB); it != pred_end(mergeBB); ++it) {
+            if (*it == rhsBB) {
+                phi->addIncoming(rhs, rhsBB);
+            } else {
                 phi->addIncoming(builder.getInt1(isOr), *it);
+            }
         }
 
         return b2d(phi);
     }
 
-    llvm::Value *lhs = gen_expr(*op.rhs);
-    llvm::Value *rhs = gen_expr(*op.lhs);
+    llvm::Value *lhs = gen_expr(*binop.lhs);
+    llvm::Value *rhs = gen_expr(*binop.rhs);
 
+    if (kind == token_kind::Lt) {
+        return b2d(builder.CreateFCmpOLT(lhs, rhs));
+    }
+    if (kind == token_kind::Gt) {
+        return b2d(builder.CreateFCmpOGT(lhs, rhs));
+    }
+    if (kind == token_kind::EqualEqual) {
+        return b2d(builder.CreateFCmpOEQ(lhs, rhs));
+    }
     if (kind == token_kind::Plus) {
         return builder.CreateFAdd(lhs, rhs);
     }
@@ -309,39 +326,30 @@ auto codegen::gen_binary_op(const resolved_binary_op &op) -> llvm::Value * {
     if (kind == token_kind::Slash) {
         return builder.CreateFDiv(lhs, rhs);
     }
-    if (kind == token_kind::Lt) {
-        return b2d(builder.CreateFCmpOLT(lhs, rhs));
-    }
-    if (kind == token_kind::Gt) {
-        return b2d(builder.CreateFCmpOGT(lhs, rhs));
-    }
-    if (kind == token_kind::EqualEqual) {
-        return b2d(builder.CreateFCmpOEQ(lhs, rhs));
-    }
 
     llvm_unreachable("unknown binary op");
     return nullptr;
 }
 
+// auto codegen::gen_conditional_op(const resolved_expr &op, llvm::BasicBlock *trueBB, llvm::BasicBlock *falseBB) -> void {
 auto codegen::gen_conditional_op(const resolved_expr &op, llvm::BasicBlock *true_block, llvm::BasicBlock *false_block) -> void {
     auto *function = cur_fn();
 
     const auto *binop = dynamic_cast<const resolved_binary_op *>(&op);
 
     if (binop && binop->op == token_kind::PipePipe) {
-        llvm::BasicBlock *next_block = llvm::BasicBlock::Create(context, "or.lhs.false", function);
-        gen_conditional_op(*binop->lhs, true_block, next_block);
+        llvm::BasicBlock *nextBB = llvm::BasicBlock::Create(context, "or.lhs.false", function);
+        gen_conditional_op(*binop->lhs, true_block, nextBB);
 
-        builder.SetInsertPoint(next_block);
+        builder.SetInsertPoint(nextBB);
         gen_conditional_op(*binop->rhs, true_block, false_block);
-
         return;
     }
     if (binop && binop->op == token_kind::AmpAmp) {
-        llvm::BasicBlock *next_block = llvm::BasicBlock::Create(context, "or.lhs.true", function);
-        gen_conditional_op(*binop->lhs, next_block, false_block);
+        llvm::BasicBlock *nextBB = llvm::BasicBlock::Create(context, "and.lhs.true", function);
+        gen_conditional_op(*binop->lhs, nextBB, false_block);
 
-        builder.SetInsertPoint(next_block);
+        builder.SetInsertPoint(nextBB);
         gen_conditional_op(*binop->rhs, true_block, false_block);
 
         return;
