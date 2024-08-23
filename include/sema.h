@@ -16,12 +16,12 @@ class sema {
     constant_expression_evaluator cee;
 
     class scope_raii {
-        sema *sema;
+        sema *sema_;
 
       public:
-        scope_raii(class sema *s) : sema(s) { sema->scopes.emplace_back(); }
+        scope_raii(sema *s) : sema_(s) { sema_->scopes.emplace_back(); }
 
-        ~scope_raii() { sema->scopes.pop_back(); }
+        ~scope_raii() { sema_->scopes.pop_back(); }
     };
 
     auto check_return_on_all_paths(const resolved_function_decl &fn, const cfg &graph) const -> bool;
