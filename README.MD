@@ -29,7 +29,7 @@ cmake --build build
 You can compile and execute a .yl file with:
 
 ```bash
-/build/yl -o fib examples/fibonacci_sequence.yl
+./build/yl -o fib examples/fibonacci_sequence.yl
 ./fib
 ```
 
