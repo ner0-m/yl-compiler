@@ -38,7 +38,7 @@ struct return_stmt : stmt {
 
     ~return_stmt() override = default;
 
-    auto dump(usize level = 0) const -> void override;
+    auto dump(usize level) const -> void override;
 };
 
 struct number_literal : expr {
@@ -48,7 +48,7 @@ struct number_literal : expr {
 
     ~number_literal() override = default;
 
-    auto dump(usize level = 0) const -> void override;
+    auto dump(usize level) const -> void override;
 };
 
 struct decl_ref_expr : expr {
@@ -58,7 +58,7 @@ struct decl_ref_expr : expr {
 
     ~decl_ref_expr() override = default;
 
-    auto dump(usize level = 0) const -> void override;
+    auto dump(usize level) const -> void override;
 };
 
 struct call_expr : expr {
@@ -70,7 +70,7 @@ struct call_expr : expr {
 
     ~call_expr() override = default;
 
-    auto dump(usize level = 0) const -> void override;
+    auto dump(usize level) const -> void override;
 };
 
 struct unary_op : expr {
@@ -82,7 +82,7 @@ struct unary_op : expr {
 
     ~unary_op() override = default;
 
-    auto dump(usize level = 0) const -> void override;
+    auto dump(usize level) const -> void override;
 };
 
 struct binary_op : expr {
@@ -96,7 +96,7 @@ struct binary_op : expr {
 
     ~binary_op() override = default;
 
-    auto dump(usize level = 0) const -> void override;
+    auto dump(usize level) const -> void override;
 };
 
 struct grouping_expr : expr {
@@ -106,7 +106,7 @@ struct grouping_expr : expr {
 
     ~grouping_expr() override = default;
 
-    auto dump(usize level = 0) const -> void override;
+    auto dump(usize level) const -> void override;
 };
 
 struct block {
@@ -116,6 +116,18 @@ struct block {
     block(source_location pos, std::vector<std::unique_ptr<stmt>> stmts) : loc(pos), statements(std::move(stmts)) {}
 
     auto dump(usize level = 0) const -> void;
+};
+
+struct assignment : stmt {
+    std::unique_ptr<decl_ref_expr> variable;
+    std::unique_ptr<expr> e;
+
+    assignment(source_location loc, std::unique_ptr<decl_ref_expr> var, std::unique_ptr<expr> e)
+        : stmt(loc), variable(std::move(var)), e(std::move(e)) {}
+
+    ~assignment() override = default;
+
+    auto dump(usize level) const -> void override;
 };
 
 struct if_stmt : stmt {
@@ -128,7 +140,7 @@ struct if_stmt : stmt {
 
     ~if_stmt() override = default;
 
-    auto dump(usize level = 0) const -> void override;
+    auto dump(usize level) const -> void override;
 };
 
 struct while_stmt : stmt {
@@ -140,7 +152,7 @@ struct while_stmt : stmt {
 
     ~while_stmt() override = default;
 
-    auto dump(usize level = 0) const -> void override;
+    auto dump(usize level) const -> void override;
 };
 
 struct type {
@@ -396,6 +408,18 @@ struct resolved_decl_stmt : resolved_stmt {
     resolved_decl_stmt(source_location loc, std::unique_ptr<resolved_var_decl> var) : resolved_stmt(loc), var(std::move(var)) {}
 
     ~resolved_decl_stmt() override = default;
+
+    auto dump(usize level) const -> void override;
+};
+
+struct resolved_assignment : resolved_stmt {
+    std::unique_ptr<resolved_decl_ref_expr> variable;
+    std::unique_ptr<resolved_expr> e;
+
+    resolved_assignment(source_location loc, std::unique_ptr<resolved_decl_ref_expr> var, std::unique_ptr<resolved_expr> e)
+        : resolved_stmt(loc), variable(std::move(var)), e(std::move(e)) {}
+
+    ~resolved_assignment() override = default;
 
     auto dump(usize level) const -> void override;
 };

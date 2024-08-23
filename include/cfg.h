@@ -91,6 +91,8 @@ class cfg_builder {
 
     auto insert_decl_stmt(const resolved_decl_stmt &stmt, usize block) -> usize;
 
+    auto insert_assignment(const resolved_assignment &stmt, usize block) -> usize;
+
   public:
     auto build(const resolved_function_decl &fn) -> cfg;
 };

@@ -201,11 +201,40 @@ auto sema::resolve_stmt(const stmt &stmt) -> std::unique_ptr<resolved_stmt> {
         return resolve_decl_stmt(*declstmt);
     }
 
+    if (auto *assign = dynamic_cast<const assignment *>(&stmt)) {
+        return resolve_assignment(*assign);
+    }
+
     if (auto *while_stmt = dynamic_cast<const struct while_stmt *>(&stmt)) {
         return resolve_while_stmt(*while_stmt);
     }
 
     __builtin_unreachable();
+}
+
+auto sema::resolve_assignment(const assignment &assign) -> std::unique_ptr<resolved_assignment> {
+    auto lhs = resolve_decl_ref_expr(*assign.variable);
+    if (!lhs) {
+        return nullptr;
+    }
+
+    auto rhs = resolve_expr(*assign.e);
+    if (!rhs) {
+        return nullptr;
+    }
+
+    if (dynamic_cast<const resolved_param_decl *>(lhs->decl)) {
+        return report(lhs->loc, "parameters are immutable and cannot be assigned");
+    }
+    auto *var = dynamic_cast<const resolved_var_decl *>(lhs->decl);
+
+    if (rhs->t.k != lhs->t.k) {
+        return report(rhs->loc, "assigned value type doesn't match variable type");
+    }
+
+    rhs->set_value(cee.evaluate(*rhs, false));
+
+    return std::make_unique<resolved_assignment>(assign.loc, std::move(lhs), std::move(rhs));
 }
 
 auto sema::resolve_decl_stmt(const decl_stmt &stmt) -> std::unique_ptr<resolved_decl_stmt> {

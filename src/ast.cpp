@@ -50,6 +50,12 @@ auto block::dump(usize level) const -> void {
     }
 };
 
+auto assignment::dump(usize level) const -> void {
+    std::print(std::cerr, "{}Assignment:\n", indent(level));
+    variable->dump(level + 1);
+    e->dump(level + 1);
+}
+
 auto if_stmt::dump(usize level) const -> void {
     std::print(std::cerr, "{}IfStmt\n", indent(level));
     condition->dump(level + 1);
@@ -149,7 +155,7 @@ auto resolved_return_stmt::dump(usize level) const -> void {
 }
 
 auto resolved_unary_op::dump(usize level) const -> void {
-    std::print(std::cerr, "{}ResolvedUnaryOperator: {}\n", indent(level), token_kind_to_string(op));
+    std::print(std::cerr, "{}ResolvedUnaryOperator: '{}'\n", indent(level), token_kind_to_string(op));
     if (auto val = get_value()) {
         std::cerr << std::format("{}| value: {}\n", indent(level), *val);
     }
@@ -203,4 +209,10 @@ auto resolved_var_decl::dump(usize level) const -> void {
 auto resolved_decl_stmt::dump(usize level) const -> void {
     std::print(std::cerr, "{}ResolvedDeclStmt:\n", indent(level));
     var->dump(level + 1);
+}
+
+auto resolved_assignment::dump(usize level) const -> void {
+    std::print(std::cerr, "{}ResolvedAssignment:\n", indent(level));
+    variable->dump(level + 1);
+    e->dump(level + 1);
 }

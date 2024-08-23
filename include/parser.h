@@ -59,6 +59,12 @@ class parser {
     //  |   <declStmt>
     auto parse_stmt() -> std::unique_ptr<stmt>;
 
+    // <assignment>
+    //   ::= <declRefExpr> '=' <expr>
+    auto parse_assignment_or_expr() -> std::unique_ptr<stmt>;
+
+    auto parse_assignment_rhs(std::unique_ptr<decl_ref_expr> dre) -> std::unique_ptr<assignment>;
+
     // <declStmt>
     //  ::= ('let'|'var') <varDecl>  ';'
     auto parse_decl_stmt() -> std::unique_ptr<decl_stmt>;

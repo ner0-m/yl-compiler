@@ -30,6 +30,10 @@ auto cfg_builder::insert_stmt(const resolved_stmt &stmt, usize block) -> usize {
         return insert_while_stmt(*while_stmt, block);
     }
 
+    if (auto *assign = dynamic_cast<const resolved_assignment *>(&stmt)) {
+        return insert_assignment(*assign, block);
+    }
+
     if (auto *expr = dynamic_cast<const resolved_expr *>(&stmt)) {
         return insert_expr(*expr, block);
     }
@@ -114,6 +118,11 @@ auto cfg_builder::insert_return_stmt(const resolved_return_stmt &stmt, usize blo
     }
 
     return block;
+}
+
+auto cfg_builder::insert_assignment(const resolved_assignment &assign, usize block) -> usize {
+    graph.insert_stmt(&assign, block);
+    return insert_expr(*assign.e, block);
 }
 
 auto cfg_builder::insert_decl_stmt(const resolved_decl_stmt &stmt, usize block) -> usize {

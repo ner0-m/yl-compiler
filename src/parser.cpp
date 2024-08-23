@@ -1,6 +1,7 @@
 #include "parser.h"
 
 #include <print>
+#include <tuple>
 
 auto tok_precedence(token_kind kind) -> i32 {
     switch (kind) {
@@ -271,17 +272,54 @@ auto parser::parse_stmt() -> std::unique_ptr<stmt> {
         return parse_decl_stmt();
     }
 
-    auto expr = parse_expr();
-    if (!expr) {
+    return parse_assignment_or_expr();
+}
+
+auto parser::parse_assignment_or_expr() -> std::unique_ptr<stmt> {
+    auto lhs = parse_prefix_expr();
+    if (!lhs) {
         return nullptr;
     }
 
+    if (next_token.kind != token_kind::Equal) {
+        auto expr = parse_expr_rhs(std::move(lhs), 0);
+
+        if (next_token.kind != token_kind::Semi) {
+            return report(next_token.loc, "expected ';' at the end of expression");
+        }
+
+        eat_next();
+
+        return expr;
+    }
+
+    auto *dre = dynamic_cast<decl_ref_expr *>(lhs.get());
+    if (!dre) {
+        return report(lhs->loc, "expected variable on the LHS of an assignment");
+    }
+
+    std::ignore = lhs.release();
+
+    auto assignment = parse_assignment_rhs(std::unique_ptr<decl_ref_expr>(dre));
+
     if (next_token.kind != token_kind::Semi) {
-        return report(next_token.loc, "expected ';' at the end of expression");
+        return report(next_token.loc, "expected ';' at the end of assignment");
     }
     eat_next(); // eat ';'
 
-    return expr;
+    return assignment;
+}
+
+auto parser::parse_assignment_rhs(std::unique_ptr<decl_ref_expr> lhs) -> std::unique_ptr<assignment> {
+    auto loc = next_token.loc;
+    eat_next();
+
+    auto rhs = parse_expr();
+    if (!rhs) {
+        return nullptr;
+    }
+
+    return std::make_unique<assignment>(loc, std::move(lhs), std::move(rhs));
 }
 
 auto parser::parse_decl_stmt() -> std::unique_ptr<decl_stmt> {
@@ -329,7 +367,7 @@ auto parser::parse_var_decl(bool is_let) -> std::unique_ptr<var_decl> {
     eat_next(); // eat '='
 
     auto init = parse_expr();
-    if(!init) {
+    if (!init) {
         return nullptr;
     }
     return std::make_unique<var_decl>(loc, id, t, !is_let, std::move(init));
