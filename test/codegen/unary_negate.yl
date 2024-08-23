@@ -1,0 +1,68 @@
+// RUN: cxx-comp %s -llvm-dump 2>&1 | FileCheck %s
+// RUN: cxx-comp %s -o unary_negate && ./unary_negate | grep -Plzxe '-2.34\n4.56\n-12\n'
+fn negate(x: number): number {
+    return -x;
+}
+// CHECK: define double @negate(double %x) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %retval = alloca double, align 8
+// CHECK-NEXT:   %x1 = alloca double, align 8
+// CHECK-NEXT:   store double %x, ptr %x1, align 8
+// CHECK-NEXT:   %0 = load double, ptr %x1, align 8
+// CHECK-NEXT:   %1 = fneg double %0
+// CHECK-NEXT:   store double %1, ptr %retval, align 8
+// CHECK-NEXT:   br label %return
+// CHECK-EMPTY:
+// CHECK-NEXT: return:                                           ; preds = <null operand!>, %entry
+// CHECK-NEXT:   %2 = load double, ptr %retval, align 8
+// CHECK-NEXT:   ret double %2
+// CHECK-NEXT: }
+
+fn null(x: number): number {
+    return --x;
+}
+// CHECK: define double @null(double %x) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %retval = alloca double, align 8
+// CHECK-NEXT:   %x1 = alloca double, align 8
+// CHECK-NEXT:   store double %x, ptr %x1, align 8
+// CHECK-NEXT:   %0 = load double, ptr %x1, align 8
+// CHECK-NEXT:   %1 = fneg double %0
+// CHECK-NEXT:   %2 = fneg double %1
+// CHECK-NEXT:   store double %2, ptr %retval, align 8
+// CHECK-NEXT:   br label %return
+// CHECK-EMPTY:
+// CHECK-NEXT: return:                                           ; preds = <null operand!>, %entry
+// CHECK-NEXT:   %3 = load double, ptr %retval, align 8
+// CHECK-NEXT:   ret double %3
+// CHECK-NEXT: }
+
+fn timesNeg3(x: number): number {
+    return -(x - -x -(-x));
+}
+// CHECK: define double @timesNeg3(double %x) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %retval = alloca double, align 8
+// CHECK-NEXT:   %x1 = alloca double, align 8
+// CHECK-NEXT:   store double %x, ptr %x1, align 8
+// CHECK-NEXT:   %0 = load double, ptr %x1, align 8
+// CHECK-NEXT:   %1 = load double, ptr %x1, align 8
+// CHECK-NEXT:   %2 = fneg double %1
+// CHECK-NEXT:   %3 = fsub double %0, %2
+// CHECK-NEXT:   %4 = load double, ptr %x1, align 8
+// CHECK-NEXT:   %5 = fneg double %4
+// CHECK-NEXT:   %6 = fsub double %3, %5
+// CHECK-NEXT:   %7 = fneg double %6
+// CHECK-NEXT:   store double %7, ptr %retval, align 8
+// CHECK-NEXT:   br label %return
+// CHECK-EMPTY:
+// CHECK-NEXT: return:                                           ; preds = <null operand!>, %entry
+// CHECK-NEXT:   %8 = load double, ptr %retval, align 8
+// CHECK-NEXT:   ret double %8
+// CHECK-NEXT: }
+
+fn main(): void {
+    println(negate(2.34));
+    println(null(4.56));
+    println(timesNeg3(4));
+}

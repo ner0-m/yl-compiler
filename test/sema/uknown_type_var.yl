@@ -1,0 +1,5 @@
+// RUN: cxx-comp %s -res-dump 2>&1 | FileCheck %s
+fn main(): void {
+    // CHECK: [[# @LINE + 1 ]]:9: error: variable 'x' has invalid 'userDefinedType' type
+    let x: userDefinedType = 1.0;
+}

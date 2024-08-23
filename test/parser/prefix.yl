@@ -1,0 +1,18 @@
+// RUN: cxx-comp %s -ast-dump 2>&1 | FileCheck %s
+
+fn main(): void {
+    // CHECK: [[# @LINE + 1 ]]:10: error: expected ';' at the end of expression
+    !1.0 |;
+
+    // CHECK: [[# @LINE + 1 ]]:11: error: expected ';' at the end of expression
+    !!1.0 !0.0;
+
+    !1.0;
+    // CHECK: UnaryOperator: '!'
+    // CHECK-NEXT:   NumberLiteral: '1.0'
+    
+    !!1.0;
+    // CHECK-NEXT: UnaryOperator: '!'
+    // CHECK-NEXT:   UnaryOperator: '!'
+    // CHECK-NEXT:     NumberLiteral: '1.0'
+}

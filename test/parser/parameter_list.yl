@@ -1,0 +1,43 @@
+// RUN: cxx-comp %s -ast-dump 2>&1 | FileCheck %s
+// CHECK: [[# @LINE + 1 ]]:6: error: expected parameter declaration
+fn f(: void {}
+
+// CHECK: [[# @LINE + 1 ]]:7: error: expected ':'
+fn f(x): void {}
+
+// CHECK: [[# @LINE + 1 ]]:8: error: expected type specifier
+fn f(x:): void {}
+
+// CHECK: [[# @LINE + 1 ]]:9: error: expected type specifier
+fn f(x: 1.0): void {}
+
+// CHECK: [[# @LINE + 1 ]]:15: error: expected ')'
+fn f(x: number: void {}
+
+// CHECK: [[# @LINE + 1 ]]:17: error: expected parameter declaration
+fn f(x: number, 2): void {}
+
+// CHECK: [[# @LINE + 1 ]]:6: error: expected parameter declaration
+fn f(,): void {}
+
+fn trailingComma(x:number,): void {}
+// CHECK: FunctionDecl: trailingComma:void
+// CHECK-NEXT:   ParamDecl: x:number
+// CHECK-NEXT:   Block
+
+fn trailingComma2(
+    x:number, 
+    y:number,
+): void {}
+// CHECK: FunctionDecl: trailingComma2:void
+// CHECK-NEXT:   ParamDecl: x:number
+// CHECK-NEXT:   ParamDecl: y:number
+// CHECK-NEXT:   Block
+
+fn f(x: number, y: number): void {}
+// CHECK: FunctionDecl: f:void
+// CHECK-NEXT:   ParamDecl: x:number
+// CHECK-NEXT:   ParamDecl: y:number
+// CHECK-NEXT:   Block
+
+fn main(): void {}

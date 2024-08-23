@@ -1,0 +1,23 @@
+// RUN: cxx-comp %s -llvm-dump 2>&1 | FileCheck %s
+// RUN: cxx-comp %s -o print && ./print | grep -Plzx '0\n1\n1.2345\n1.0002345\n12345.6789\n'
+fn main(): void {
+    println(0.0);
+    println(01.0);
+    println(1.234500000);
+    println(1.000234500000);
+    println(12345.6789);
+}
+
+// CHECK: @0 = private unnamed_addr constant [7 x i8] c"%.15g\0A\00", align 1
+
+// CHECK: define void @println(double %n) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %n1 = alloca double, align 8
+// CHECK-NEXT:   store double %n, ptr %n1, align 8
+// CHECK-NEXT:   %0 = load double, ptr %n1, align 8
+// CHECK-NEXT:   %1 = call i32 (ptr, ...) @printf(ptr @0, double %0)
+// CHECK-NEXT:   ret void
+// CHECK-NEXT: }
+
+// CHECK: declare i32 @printf(ptr, ...)
+

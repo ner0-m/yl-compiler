@@ -1,0 +1,76 @@
+// RUN: cxx-comp %s -llvm-dump 2>&1 | FileCheck %s
+// RUN: cxx-comp %s -o multiple_return_while && ./multiple_return_while | grep -Plzx '0\n5\n3\n'
+fn foo(x: number): number {
+    var n: number = x;
+    while n > 10.0 {
+        n = n - 1.0;
+        
+        if x == 15.0 {
+            return 3.0;
+
+            return 1.0;
+            
+            if 0.0 {
+
+            } else {
+                return 2.0;
+            }
+        }
+
+        return 5.0;
+        
+        return 1.0;
+        1.0 + 3.0;
+    }
+
+    return 0.0;
+}
+// CHECK: define double @foo(double %x) {
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   %retval = alloca double, align 8
+// CHECK-NEXT:   %x1 = alloca double, align 8
+// CHECK-NEXT:   %n = alloca double, align 8
+// CHECK-NEXT:   store double %x, ptr %x1, align 8
+// CHECK-NEXT:   %0 = load double, ptr %x1, align 8
+// CHECK-NEXT:   store double %0, ptr %n, align 8
+// CHECK-NEXT:   br label %while.cond
+// CHECK-EMPTY:
+// CHECK-NEXT: while.cond:                                       ; preds = <null operand!>, %entry
+// CHECK-NEXT:   %1 = load double, ptr %n, align 8
+// CHECK-NEXT:   %2 = fcmp ogt double %1, 1.000000e+01
+// CHECK-NEXT:   %to.double = uitofp i1 %2 to double
+// CHECK-NEXT:   %to.bool = fcmp one double %to.double, 0.000000e+00
+// CHECK-NEXT:   br i1 %to.bool, label %while.body, label %while.exit
+// CHECK-EMPTY:
+// CHECK-NEXT: while.body:                                       ; preds = %while.cond
+// CHECK-NEXT:   %3 = load double, ptr %n, align 8
+// CHECK-NEXT:   %4 = fsub double %3, 1.000000e+00
+// CHECK-NEXT:   store double %4, ptr %n, align 8
+// CHECK-NEXT:   %5 = load double, ptr %x1, align 8
+// CHECK-NEXT:   %6 = fcmp oeq double %5, 1.500000e+01
+// CHECK-NEXT:   %to.double2 = uitofp i1 %6 to double
+// CHECK-NEXT:   %to.bool3 = fcmp one double %to.double2, 0.000000e+00
+// CHECK-NEXT:   br i1 %to.bool3, label %if.true, label %if.exit
+// CHECK-EMPTY:
+// CHECK-NEXT: while.exit:                                       ; preds = %while.cond
+// CHECK-NEXT:   store double 0.000000e+00, ptr %retval, align 8
+// CHECK-NEXT:   br label %return
+// CHECK-EMPTY:
+// CHECK-NEXT: if.true:                                          ; preds = %while.body
+// CHECK-NEXT:   store double 3.000000e+00, ptr %retval, align 8
+// CHECK-NEXT:   br label %return
+// CHECK-EMPTY:
+// CHECK-NEXT: if.exit:                                          ; preds = <null operand!>, %while.body
+// CHECK-NEXT:   store double 5.000000e+00, ptr %retval, align 8
+// CHECK-NEXT:   br label %return
+// CHECK-EMPTY:
+// CHECK-NEXT: return:                                           ; preds = <null operand!>, %while.exit, %if.exit, %if.true
+// CHECK-NEXT:   %7 = load double, ptr %retval, align 8
+// CHECK-NEXT:   ret double %7
+// CHECK-NEXT: }
+
+fn main(): void {
+    println(foo(10.0));
+    println(foo(11.0));
+    println(foo(15.0));
+}

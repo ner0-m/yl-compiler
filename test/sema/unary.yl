@@ -1,0 +1,10 @@
+// RUN: cxx-comp %s -res-dump 2>&1 | FileCheck %s
+fn foo(): void {}
+
+fn main(): void {
+    // CHECK: [[# @LINE + 1 ]]:9: error: void expression cannot be used as an operand to unary operator
+    !foo();
+
+    // CHECK: [[# @LINE + 1 ]]:9: error: void expression cannot be used as an operand to unary operator
+    -foo();
+}

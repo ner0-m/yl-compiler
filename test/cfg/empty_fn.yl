@@ -1,0 +1,10 @@
+// RUN: cxx-comp %s -cfg-dump 2>&1 | FileCheck %s
+fn main(): void {}
+// CHECK: main:
+// CHECK-NEXT: [1 (entry)]
+// CHECK-NEXT:   preds: 
+// CHECK-NEXT:   succs: 0 
+// CHECK-EMPTY: 
+// CHECK-NEXT: [0 (exit)]
+// CHECK-NEXT:   preds: 1 
+// CHECK-NEXT:   succs: 

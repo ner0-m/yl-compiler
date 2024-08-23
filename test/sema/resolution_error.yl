@@ -1,0 +1,5 @@
+// RUN: cxx-comp %s || echo $? | FileCheck %s
+// CHECK: 1
+fn foo(): custom {}
+
+fn main(): void {}

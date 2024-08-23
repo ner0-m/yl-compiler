@@ -1,0 +1,6 @@
+// RUN: cxx-comp %s -res-dump 2>&1 | FileCheck %s
+fn main(): void {}
+
+// CHECK: ResolvedFunctionDecl: @({{.*}}) println:
+// CHECK-NEXT:  ResolvedParamDecl: @({{.*}}) n:
+// CHECK-NEXT:  ResolvedBlock

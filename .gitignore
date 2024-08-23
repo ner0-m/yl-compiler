@@ -7,6 +7,9 @@
 # Unignore all dirs
 !*/
 
+# Ignore Output dirs in /test
+test/*/Output
+
 build/
 
 # Prerequisites

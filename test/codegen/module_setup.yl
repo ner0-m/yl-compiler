@@ -1,0 +1,7 @@
+// RUN: cxx-comp %s -llvm-dump 2>&1 | FileCheck %s
+
+// CHECK: ; ModuleID = '<translation_unit>'
+// CHECK-NEXT: source_filename = "{{.*}}/module_setup.yl"
+// CHECK-NEXT: target triple = "{{.*}}"
+
+fn main(): void {}

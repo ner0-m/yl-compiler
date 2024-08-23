@@ -1,0 +1,2 @@
+// RUN: cxx-comp %s 2>&1 -ast-dump | FileCheck %s
+// CHECK: [[# @LINE + 1 ]]:1: error: main function not found
