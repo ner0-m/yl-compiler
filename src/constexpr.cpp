@@ -1,7 +1,16 @@
 #include "constexpr.h"
 #include "ast.h"
 
+#include <iostream>
 #include <llvm/Support/ErrorHandling.h>
+
+std::optional<bool> to_bool(std::optional<double> d) {
+    if (!d) {
+        return std::nullopt;
+    }
+
+    return d != 0.0;
+}
 
 auto constant_expression_evaluator::evaluate(const resolved_expr &expr, bool allow_side_effects) const -> std::optional<double> {
     if (auto val = expr.get_value()) {
@@ -64,12 +73,12 @@ auto constant_expression_evaluator::eval_binary_op(const resolved_binary_op &bop
     }
 
     if (bop.op == token_kind::PipePipe) {
-        if ((lhs.value() != 0.0) == true) {
+        if (to_bool(lhs) == true) {
             return 1.0;
         }
 
         auto rhs = evaluate(*bop.rhs, allow_side_effects);
-        if (rhs.has_value() && (rhs != 0.0) == true) {
+        if (to_bool(rhs) == true) {
             return 1.0;
         }
 
@@ -81,12 +90,12 @@ auto constant_expression_evaluator::eval_binary_op(const resolved_binary_op &bop
     }
 
     if (bop.op == token_kind::AmpAmp) {
-        if ((lhs.value() != 0.0) == false) {
+        if (to_bool(lhs) == false) {
             return 0.0;
         }
 
         auto rhs = evaluate(*bop.rhs, allow_side_effects);
-        if (rhs.has_value() && (rhs != 0.0) == false) {
+        if (to_bool(rhs) == false) {
             return 0.0;
         }
 
