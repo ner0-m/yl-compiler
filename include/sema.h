@@ -28,6 +28,8 @@ class sema {
 
     auto flow_sensitive_checks(const resolved_function_decl &fn) const -> bool;
 
+    auto check_variable_initialization(const resolved_function_decl &decl, const cfg &graph) const -> bool;
+
     auto lookupDecl(const std::string &id) const -> std::pair<resolved_decl *, int>;
 
     auto insert_to_cur_scope(resolved_decl &decl) -> bool;

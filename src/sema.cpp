@@ -1,12 +1,14 @@
 #include "sema.h"
 #include "cfg.h"
 #include "utils.h"
+#include <map>
 
 auto sema::flow_sensitive_checks(const resolved_function_decl &fn) const -> bool {
     cfg graph = cfg_builder().build(fn);
 
     bool error = false;
     error |= check_return_on_all_paths(fn, graph);
+    error |= check_variable_initialization(fn, graph);
     return error;
 }
 
@@ -25,7 +27,7 @@ auto sema::check_return_on_all_paths(const resolved_function_decl &fn, const cfg
         auto bb = worklist.back();
         worklist.pop_back();
 
-        if (visited.contains(bb)) {
+        if (!visited.emplace(bb).second) {
             continue;
         }
 
@@ -51,6 +53,89 @@ auto sema::check_return_on_all_paths(const resolved_function_decl &fn, const cfg
     }
 
     return exit_reached || return_count == 0;
+}
+
+auto sema::check_variable_initialization(const resolved_function_decl &decl, const cfg &graph) const -> bool {
+    enum class state { bottom, unassigned, assigned, top };
+    using lattice = std::map<const resolved_var_decl *, state>;
+
+    auto join = [](state s1, state s2) {
+        if (s1 == s2) {
+            return s1;
+        }
+
+        if (s1 == state::bottom) {
+            return s2;
+        }
+
+        if (s2 == state::bottom) {
+            return s1;
+        }
+
+        return state::top;
+    };
+
+    std::vector<lattice> cur_lattices(graph.basic_blocks.size());
+    std::vector<std::pair<source_location, std::string>> pending_errors;
+
+    auto changed = true;
+    while (changed) {
+        changed = false;
+        pending_errors.clear();
+
+        for (i32 bb = graph.entry; bb != graph.exit; --bb) {
+            lattice tmp;
+
+            const auto &[preds, succs, stmts] = graph.basic_blocks[bb];
+
+            for (auto &&pred : preds) {
+                for (auto &&[decl, state] : cur_lattices[pred.first]) {
+                    tmp[decl] = join(tmp[decl], state);
+                }
+            }
+
+            for (auto it = stmts.rbegin(); it != stmts.rend(); ++it) {
+                auto *stmt = *it;
+
+                if (const auto *decl = dynamic_cast<const resolved_decl_stmt *>(stmt)) {
+                    tmp[decl->var.get()] = decl->var->initializer ? state::assigned : state::unassigned;
+                    continue;
+                }
+
+                if (auto *assignment = dynamic_cast<const resolved_assignment *>(stmt)) {
+                    const auto *var = dynamic_cast<const resolved_var_decl *>(assignment->variable->decl);
+
+                    if (!var->is_mutable && tmp[var] != state::unassigned) {
+                        pending_errors.emplace_back(assignment->loc, std::format("'{}' cannot be mutated", var->identifier));
+                    }
+
+                    tmp[var] = state::assigned;
+                    continue;
+                }
+
+                if (const auto *dre = dynamic_cast<const resolved_decl_ref_expr *>(stmt)) {
+                    const auto *var = dynamic_cast<const resolved_var_decl *>(dre->decl);
+
+                    if (var && tmp[var] != state::assigned) {
+                        pending_errors.emplace_back(dre->loc, std::format("'{}' is not initialized", var->identifier));
+                    }
+
+                    continue;
+                }
+            }
+
+            if (cur_lattices[bb] != tmp) {
+                cur_lattices[bb] = tmp;
+                changed = true;
+            }
+        }
+    }
+
+    for (auto &&[loc, msg] : pending_errors) {
+        report(loc, msg);
+    }
+
+    return !pending_errors.empty();
 }
 
 auto sema::resolve_ast() -> std::vector<std::unique_ptr<resolved_function_decl>> {
@@ -414,14 +499,17 @@ auto sema::resolve_call_expr(const call_expr &call) -> std::unique_ptr<resolved_
     }
 
     auto resolved_callee = resolve_decl_ref_expr(*dre, true);
+    if (!resolved_callee) {
+        return nullptr;
+    }
 
-    const auto *resolved_function_decl = dynamic_cast<const struct resolved_function_decl *>(resolved_callee->decl);
+    const auto *resolved_fn_decl = dynamic_cast<const resolved_function_decl *>(resolved_callee->decl);
 
-    if (!resolved_function_decl) {
+    if (!resolved_fn_decl) {
         return report(call.loc, "calling non-function symbol");
     }
 
-    if (call.arguments.size() != resolved_function_decl->params.size()) {
+    if (call.arguments.size() != resolved_fn_decl->params.size()) {
         return report(call.loc, "argument count mismatch in function call");
     }
 
@@ -430,7 +518,7 @@ auto sema::resolve_call_expr(const call_expr &call) -> std::unique_ptr<resolved_
     for (auto &&arg : call.arguments) {
         auto resolved_arg = resolve_expr(*arg);
 
-        if (resolved_arg->t.k != resolved_function_decl->params[idx]->type_.k) {
+        if (resolved_arg->t.k != resolved_fn_decl->params[idx]->type_.k) {
             return report(resolved_arg->loc, "unexpected type of argument");
         }
 
@@ -440,7 +528,7 @@ auto sema::resolve_call_expr(const call_expr &call) -> std::unique_ptr<resolved_
         resolved_args.emplace_back(std::move(resolved_arg));
     }
 
-    return std::make_unique<resolved_call_expr>(call.loc, *resolved_function_decl, std::move(resolved_args));
+    return std::make_unique<resolved_call_expr>(call.loc, *resolved_fn_decl, std::move(resolved_args));
 }
 
 auto sema::resolve_unary_op(const unary_op &op) -> std::unique_ptr<resolved_unary_op> {
