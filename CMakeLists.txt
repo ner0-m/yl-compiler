@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1...3.29)
 
-project(Compiler VERSION 0.1.0 LANGUAGES C CXX)
+project(yl-compiler VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -29,15 +29,15 @@ FetchContent_MakeAvailable(backward)
 
 # Add Backward to your target (either Backward::Interface, Backward::Object, or Backward::Backward)
 
-add_executable(cxx-comp src/main.cpp src/lexer.cpp src/parser.cpp src/utils.cpp
+add_executable(yl src/main.cpp src/lexer.cpp src/parser.cpp src/utils.cpp
     src/ast.cpp src/sema.cpp src/codegen.cpp src/constexpr.cpp src/cfg.cpp)
-target_link_libraries(cxx-comp PUBLIC LLVM Backward::Backward)
-target_include_directories(cxx-comp PUBLIC
+target_link_libraries(yl PUBLIC LLVM Backward::Backward)
+target_include_directories(yl PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
-    $<INSTALL_INTERFACE:include/cxx-comp>
+    $<INSTALL_INTERFACE:include/yl>
 )
 
 add_custom_target(check
     COMMAND lit -v --path=${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/test
-    DEPENDS cxx-comp
+    DEPENDS yl
     USES_TERMINAL)

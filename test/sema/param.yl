@@ -1,4 +1,4 @@
-// RUN: cxx-comp %s -res-dump 2>&1 | FileCheck %s
+// RUN: yl %s -res-dump 2>&1 | FileCheck %s
 
 // CHECK: [[# @LINE + 1 ]]:8: error: parameter 'x' has invalid 'void' type
 fn foo(x: void, y: customType): void {}

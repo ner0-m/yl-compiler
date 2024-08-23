@@ -1,4 +1,4 @@
-// RUN: cxx-comp %s -ast-dump 2>&1 | FileCheck %s
+// RUN: yl %s -ast-dump 2>&1 | FileCheck %s
 fn error(): void {
     // CHECK: [[# @LINE + 1 ]]:20: error: expected expression
     let x: number =;

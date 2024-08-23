@@ -1,5 +1,5 @@
-// RUN: cxx-comp %s -llvm-dump 2>&1 | FileCheck %s
-// RUN: cxx-comp %s -o return && ./return | ( ! grep ^ )
+// RUN: yl %s -llvm-dump 2>&1 | FileCheck %s
+// RUN: yl %s -o return && ./return | ( ! grep ^ )
 fn main(): void {}
 
 fn noInsertPoint(): void {

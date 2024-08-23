@@ -1,4 +1,4 @@
-// RUN: cxx-comp %s 2>&1 -ast-dump | FileCheck %s
+// RUN: yl %s 2>&1 -ast-dump | FileCheck %s
 fn main(): void {
     1.0
 // CHECK: [[# @LINE + 1 ]]:1: error: expected ';' at the end of expression

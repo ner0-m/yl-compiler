@@ -1,4 +1,4 @@
-// RUN: cxx-comp %s 2>&1
+// RUN: yl %s 2>&1
 
 fn main(): void {}
 

@@ -1,5 +1,5 @@
-// RUN: cxx-comp %s -llvm-dump 2>&1 | FileCheck %s
-// RUN: cxx-comp %s -o multiple_return && ./multiple_return
+// RUN: yl %s -llvm-dump 2>&1 | FileCheck %s
+// RUN: yl %s -o multiple_return && ./multiple_return
 fn main(): void {
     return;
 

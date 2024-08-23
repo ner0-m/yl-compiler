@@ -1,5 +1,5 @@
-// RUN: cxx-comp %s -llvm-dump 2>&1 | FileCheck %s
-// RUN: cxx-comp %s -o cond_binop_side_effect && ./cond_binop_side_effect | grep -Plzx '1\n2\n3\n4\n5\n7\n10\n13\n14\n15\n16\n'
+// RUN: yl %s -llvm-dump 2>&1 | FileCheck %s
+// RUN: yl %s -o cond_binop_side_effect && ./cond_binop_side_effect | grep -Plzx '1\n2\n3\n4\n5\n7\n10\n13\n14\n15\n16\n'
 fn true(x: number): number {
     println(x);
     return 1.0;

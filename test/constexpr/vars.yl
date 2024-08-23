@@ -1,4 +1,4 @@
-// RUN: cxx-comp %s -res-dump 2>&1 | FileCheck %s --match-full-lines
+// RUN: yl %s -res-dump 2>&1 | FileCheck %s --match-full-lines
 fn pass(): number {
     let x: number = 2.0;
     return x * 10.0;

@@ -1,4 +1,4 @@
-// RUN: cxx-comp %s -res-dump 2>&1 | FileCheck %s
+// RUN: yl %s -res-dump 2>&1 | FileCheck %s
 fn foo(): void {}
 
 fn bar(): number { return 1.0; }

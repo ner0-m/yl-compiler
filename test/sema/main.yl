@@ -1,2 +1,2 @@
-// RUN: cxx-comp %s
+// RUN: yl %s
 fn main(): void {}
